@@ -1,6 +1,7 @@
 import { NavLink, Outlet, Link } from "react-router-dom";
 import { useApp } from "../lib/app-context";
 import { Icon, Logo } from "./ui";
+import { DemoGuide } from "./DemoGuide";
 
 type NavItem = { to: string; label: string; short: string; icon: Parameters<typeof Icon>[0]["name"]; end?: boolean };
 
@@ -15,6 +16,7 @@ const groups: { label: string | null; items: NavItem[] }[] = [
   { label: "Prepare and find", items: [
     { to: "/app/assistant", label: "AI Assistant", short: "Assistant", icon: "chat" },
     { to: "/app/preparation", label: "AI Preparation", short: "Prepare", icon: "sparkle" },
+    { to: "/app/find-care", label: "Find care", short: "Find care", icon: "check" },
     { to: "/app/fit-finder", label: "Fit Finder", short: "Find", icon: "search" },
   ] },
 ];
@@ -75,6 +77,7 @@ export function Layout() {
           <NavLink key={l.to} to={l.to} end={l.end}><Icon name={l.icon} />{l.short}</NavLink>
         ))}
       </nav>
+      <DemoGuide />
     </>
   );
 }
