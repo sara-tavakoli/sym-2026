@@ -11,8 +11,12 @@ Hosted on Railway: one Docker container, SQLite on a persistent volume at `/data
 One deployable: the API also serves the built SPA. The only third party that receives health text is the Gemini API, and only when the user asks for generation.
 
 ## Data model (SQLite)
-`users` · `sessions` · `appointments` · `preparation_notes` · `appointment_briefs` · `brief_source_refs` · `visit_instructions` · `follow_up_tasks`.
-Every child table carries `user_id` and every query filters on it. Deleting a user or appointment cascades. Indexes: `appointments(user_id, starts_at)`, `follow_up_tasks(user_id, status)`, `follow_up_tasks(appointment_id)`, `sessions(user_id)`, `brief_source_refs(brief_id)`.
+Core: `users` · `sessions` · `appointments` · `preparation_notes` · `appointment_briefs` · `brief_source_refs` · `visit_instructions` · `follow_up_tasks` (with `due_date` and `assignee_user_id`) · `draft_briefs`.
+Clinician loop: `appointment_shares` (token stored as SHA-256, expiry, revocation, view count) · `share_question_marks` · `clinician_plans`.
+Care circle: `care_invites` (hashed token) · `care_members` (owner, member, role `viewer`/`helper`, unique per pair) · `care_activity`.
+Fit Finder directory (fictional): `clinics` · `providers` · `clinic_hours` · `clinic_billing` · `clinic_accessibility` · … · `saved_searches`.
+
+**Multi-user access model.** A patient's rows carry their `user_id` and owner routes filter on it. Other people reach a patient's data only through one of two narrow doors: a clinician **share token** (read the brief, tick questions, post a plan; nothing else) or **care-circle membership**, checked on every request by a single helper (viewer = read confirmed briefs and tasks; helper = also update and take tasks). Supporters never see preparation notes, drafts, raw instructions or emails. Every child table carries `user_id` (or `owner_id`) and every query filters on it. Deleting a user or appointment cascades. Indexes: `appointments(user_id, starts_at)`, `follow_up_tasks(user_id, status)`, `follow_up_tasks(appointment_id)`, `sessions(user_id)`, `brief_source_refs(brief_id)`.
 
 ## AI safety design (enforced in code, not only in prompts)
 1. **Structured output**: Gemini is called with `responseMimeType: application/json` and a `responseJsonSchema`; the result is validated with zod; one retry on malformed output. SDK errors map to clean statuses (429 busy, 503 not configured/unavailable, 502 bad output, 504 timeout).
