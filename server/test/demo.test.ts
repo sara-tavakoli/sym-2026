@@ -65,3 +65,13 @@ test("the demo shows both sides of the care circle", async () => {
   assert.equal(joe.data.role, "helper");
   assert.equal(joe.data.appointments[0].brief_ready, 1);
 });
+
+test("demo appointment times are Sydney wall-clock times whatever the server's time zone", async () => {
+  const { at } = await import("../src/demo.js");
+  const { zonedParts, zonedDate } = await import("../src/import/tz.js");
+  const now = new Date("2026-10-18T13:30:00Z"); // 19 Oct 00:30 in Sydney (AEDT), still 18 Oct in UTC
+  const iso = at(1, 16, 0, now);
+  const p = zonedParts(new Date(iso));
+  assert.equal(zonedDate(new Date(iso)), "2026-10-20");
+  assert.deepEqual([p.hour, p.minute], [16, 0]);
+});
