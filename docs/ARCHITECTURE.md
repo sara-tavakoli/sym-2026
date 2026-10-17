@@ -4,8 +4,10 @@
 ```
 Browser (React SPA) ──HTTPS──▶ Express API (stateless) ──▶ SQLite (WAL)
                                    │
-                                   └──▶ AI client ──▶ Google Gemini API (@google/genai, gemini-3.8-flash)
+                                   └──▶ AI client ──▶ Google Gemini API (primary)
+                                                  └─▶ Anthropic Claude API (automatic fallback)
 ```
+Hosted on Railway: one Docker container, SQLite on a persistent volume at `/data`.
 One deployable: the API also serves the built SPA. The only third party that receives health text is the Gemini API, and only when the user asks for generation.
 
 ## Data model (SQLite)
@@ -35,7 +37,22 @@ Every child table carries `user_id` and every query filters on it. Deleting a us
 - Shared rate-limit and session cache (Redis); multiple API instances behind a load balancer.
 - Observability: structured logs, metrics for AI latency/queue depth/drop rates.
 
-**Honest status:** no load testing has been performed. We make no claim about concurrent-user capacity. AI throughput is bounded by the Gemini project's quota and by `AI_MAX_CONCURRENT` per instance; the queue and rate limits protect the rest of the app and the budget. Supporting 10,000 users would mean the proposed queue, a higher quota, and a load test to confirm.
+### Measured (18 Oct 2026, local load test)
+`autocannon`, 50 concurrent connections for 10 s, one authenticated user with 40 appointments, single Node process + SQLite (WAL) on a laptop (Apple Silicon). Not repeated on the hosted instance, which has less CPU, so treat these as upper bounds.
+
+| Endpoint | Throughput | Latency p50 / p97.5 | Errors |
+|---|---|---|---|
+| `GET /api/dashboard` (5 indexed queries) | ~3,000 req/s | 14 ms / 43 ms | 0 |
+| `POST /api/appointments` (write + read back) | ~4,900 req/s | 8 ms / 28 ms | 0 |
+| AI brief generation | bounded by `AI_MAX_CONCURRENT=4` per instance, ~3–10 s per call | — | queue sheds load with 503 at 20 waiting |
+
+### What breaks first at 100x users? (in order)
+1. **AI generation throughput and cost.** Four concurrent calls of a few seconds each is roughly 0.5–1 generation/s per instance. At 100x, peak demand exceeds that and the bounded queue starts returning "busy" (by design, so it doesn't fall over). **Fix:** durable job queue (BullMQ/SQS) + worker pool, async UI (job id + polling), provider quota increase. Gemini → Claude fallback is already built, so one provider's outage or rate limit doesn't stop the app.
+2. **Single-node SQLite.** Reads and writes are fast (above), but the database lives on one volume: no horizontal scaling, no failover. **Fix:** PostgreSQL (managed, e.g. Neon/RDS) with a pool; the SQL is standard and every query is already parameterised and scoped by `user_id`, so the port is mechanical. Then several stateless API instances behind a load balancer (sessions are already in the DB).
+3. **In-memory rate limits and AI queue.** They are per process, so with several instances limits become per instance. **Fix:** Redis-backed limiter and queue.
+4. **Public share links** (clinician view) are read-heavy and unauthenticated. **Fix:** rate limits (built) plus CDN-cached static assets; the data itself is never cached.
+
+**Honest status:** the numbers above come from one local run, not a production load test, and we make no claim about concurrent-user capacity on the hosted instance.
 
 ## Privacy
 Synthetic data only for the hackathon. Minimal storage; account deletion removes all user data. Cookies are httpOnly/SameSite=Lax (Secure in production); passwords use scrypt; only session-token hashes are stored. Health text is sent to the Gemini API only when a user requests generation; raw AI responses are not stored. The API key is server-side only. On Gemini's free tier, Google may use submitted content to improve its products — use a billing-enabled project beyond the demo.
