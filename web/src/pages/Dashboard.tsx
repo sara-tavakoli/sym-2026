@@ -99,7 +99,7 @@ function AssistantEntry() {
         <input id="assist-q" value={text} maxLength={2000} onChange={(e) => setText(e.target.value)} placeholder="What do you need help with?" />
         <button className="btn">Open assistant</button>
       </form>
-      <p className="fine">It won't diagnose or give medical advice.</p>
+      <p className="fine">It won't diagnose or give medical advice. Not sure what kind of service you need? <Link to="/app/find-care">Find care that fits</Link>.</p>
     </section>
   );
 }
