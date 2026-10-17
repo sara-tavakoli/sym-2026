@@ -5,6 +5,7 @@ import { newId, requireAuth } from "../auth.js";
 import { aiLimiter } from "../ai/limit.js";
 import { AiError } from "../ai/client.js";
 import { extractTasks } from "../ai/tasks.js";
+import { isHelper, logOwnerTaskChange } from "./circle.js";
 
 // Mounted at /api/appointments/:id (appointment-scoped) and /api/tasks (user-scoped).
 export const instructionsRouter = Router({ mergeParams: true });
@@ -14,7 +15,9 @@ tasksRouter.use(requireAuth);
 
 const pid = (req: Request) => (req.params as Record<string, string>).id;
 const norm = (s: string) => s.toLowerCase().replace(/[\s ]+/g, " ").trim();
-const TASK_COLS = "id, appointment_id, instruction_id, title, source_text, deadline, status, needs_clarification, clarification_reason, notes, created_at, updated_at";
+const TASK_COLS = "id, appointment_id, instruction_id, title, source_text, deadline, status, needs_clarification, clarification_reason, notes, created_at, updated_at, assignee_user_id";
+// Care circle: the name of the member who has taken the task on (unqualified column resolves to the outer task row).
+const ASSIGNEE = "(SELECT u.name FROM users u WHERE u.id = assignee_user_id) AS assignee_name";
 
 function ownsAppointment(req: Request, res: Response): boolean {
   const row = db.prepare("SELECT 1 FROM appointments WHERE id = ? AND user_id = ?").get(pid(req), req.user!.id);
@@ -65,7 +68,7 @@ instructionsRouter.post("/instructions/confirm", (req, res) => {
     for (const t of b.tasks) ins.run(newId(), uid, apptId, instructionId, t.title, t.source_text, t.deadline, t.needs_clarification ? 1 : 0, t.clarification_reason, t.notes);
     db.exec("COMMIT");
   } catch (e) { db.exec("ROLLBACK"); throw e; }
-  res.status(201).json({ tasks: db.prepare(`SELECT ${TASK_COLS} FROM follow_up_tasks WHERE instruction_id = ? AND user_id = ? ORDER BY created_at, rowid`).all(instructionId, uid) });
+  res.status(201).json({ tasks: db.prepare(`SELECT ${TASK_COLS}, ${ASSIGNEE} FROM follow_up_tasks WHERE instruction_id = ? AND user_id = ? ORDER BY created_at, rowid`).all(instructionId, uid) });
 });
 
 instructionsRouter.get("/follow-up", (req, res) => {
@@ -73,7 +76,7 @@ instructionsRouter.get("/follow-up", (req, res) => {
   const uid = req.user!.id;
   res.json({
     instructions: db.prepare("SELECT id, raw_text, created_at FROM visit_instructions WHERE appointment_id = ? AND user_id = ? ORDER BY created_at DESC").all(pid(req), uid),
-    tasks: db.prepare(`SELECT ${TASK_COLS} FROM follow_up_tasks WHERE appointment_id = ? AND user_id = ? ORDER BY created_at, rowid`).all(pid(req), uid),
+    tasks: db.prepare(`SELECT ${TASK_COLS}, ${ASSIGNEE} FROM follow_up_tasks WHERE appointment_id = ? AND user_id = ? ORDER BY created_at, rowid`).all(pid(req), uid),
   });
 });
 
@@ -82,7 +85,7 @@ instructionsRouter.post("/tasks", (req, res) => {
   const b = z.object({ title: z.string().trim().min(1, "Title is required").max(200) }).parse(req.body);
   const id = newId();
   db.prepare("INSERT INTO follow_up_tasks (id, user_id, appointment_id, title, source_text) VALUES (?,?,?,?,?)").run(id, req.user!.id, pid(req), b.title, "Added manually");
-  res.status(201).json(db.prepare(`SELECT ${TASK_COLS} FROM follow_up_tasks WHERE id = ?`).get(id));
+  res.status(201).json(db.prepare(`SELECT ${TASK_COLS}, ${ASSIGNEE} FROM follow_up_tasks WHERE id = ?`).get(id));
 });
 
 const listQuery = z.object({
@@ -97,7 +100,7 @@ tasksRouter.get("/", (req, res) => {
   const uid = req.user!.id;
   const total = (db.prepare(`SELECT COUNT(*) AS n FROM follow_up_tasks t WHERE t.user_id = ? ${cond}`).get(uid) as { n: number }).n;
   const items = db.prepare(
-    `SELECT ${TASK_COLS.split(", ").map((c) => "t." + c).join(", ")}, a.practitioner_name, a.starts_at
+    `SELECT ${TASK_COLS.split(", ").map((c) => "t." + c).join(", ")}, ${ASSIGNEE}, a.practitioner_name, a.starts_at
      FROM follow_up_tasks t JOIN appointments a ON a.id = t.appointment_id
      WHERE t.user_id = ? ${cond} ORDER BY t.created_at DESC, t.rowid DESC LIMIT ? OFFSET ?`).all(uid, q.pageSize, (q.page - 1) * q.pageSize);
   res.json({ items, total, page: q.page, pageSize: q.pageSize });
@@ -108,16 +111,20 @@ const patchBody = z.object({
   notes: z.string().trim().max(2000).nullable().optional(),
   deadline: z.string().trim().max(100).nullable().optional(),
   status: z.enum(["todo", "in_progress", "completed"]).optional(),
+  assignee_user_id: z.string().max(64).nullable().optional(),
 });
 
 tasksRouter.patch("/:id", (req, res) => {
   const b = patchBody.parse(req.body);
-  const cur = db.prepare("SELECT title, notes, deadline, status FROM follow_up_tasks WHERE id = ? AND user_id = ?").get(pid(req), req.user!.id) as
-    { title: string; notes: string | null; deadline: string | null; status: string } | undefined;
+  const cur = db.prepare("SELECT title, notes, deadline, status, assignee_user_id FROM follow_up_tasks WHERE id = ? AND user_id = ?").get(pid(req), req.user!.id) as
+    { title: string; notes: string | null; deadline: string | null; status: string; assignee_user_id: string | null } | undefined;
   if (!cur) return res.status(404).json({ error: "Task not found" });
-  db.prepare("UPDATE follow_up_tasks SET title=?, notes=?, deadline=?, status=?, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=? AND user_id=?")
-    .run(b.title ?? cur.title, (b.notes === undefined ? cur.notes : b.notes || null), (b.deadline === undefined ? cur.deadline : b.deadline || null), b.status ?? cur.status, req.params.id, req.user!.id);
-  res.json(db.prepare(`SELECT ${TASK_COLS} FROM follow_up_tasks WHERE id = ?`).get(req.params.id));
+  const assignee = b.assignee_user_id === undefined ? cur.assignee_user_id : b.assignee_user_id || null;
+  if (assignee && assignee !== cur.assignee_user_id && !isHelper(req.user!.id, assignee)) return res.status(400).json({ error: "Tasks can only be assigned to helpers in your care circle" });
+  db.prepare("UPDATE follow_up_tasks SET title=?, notes=?, deadline=?, status=?, assignee_user_id=?, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=? AND user_id=?")
+    .run(b.title ?? cur.title, (b.notes === undefined ? cur.notes : b.notes || null), (b.deadline === undefined ? cur.deadline : b.deadline || null), b.status ?? cur.status, assignee, req.params.id, req.user!.id);
+  logOwnerTaskChange(req.user!.id, String(req.params.id), b.title ?? cur.title, { status: cur.status, assignee: cur.assignee_user_id }, { status: b.status ?? cur.status, assignee });
+  res.json(db.prepare(`SELECT ${TASK_COLS}, ${ASSIGNEE} FROM follow_up_tasks WHERE id = ?`).get(req.params.id));
 });
 
 tasksRouter.delete("/:id", (req, res) => {

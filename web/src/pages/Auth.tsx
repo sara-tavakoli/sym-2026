@@ -11,8 +11,12 @@ export default function Auth({ mode }: { mode: "login" | "register" }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const isReg = mode === "register";
+  const next = params.get("next");
+  // Only known in-app destinations are honoured (no open redirect); care circle invites come back to /join/<token>.
+  const dest = next && /^\/join\/[a-f0-9]{64}$/.test(next) ? next : next === "preparation" || next === "follow-up" ? `/app/${next}` : "/app";
+  const keep = next ? `?next=${encodeURIComponent(next)}` : "";
 
-  if (!loading && user) return <Navigate to="/app" replace />;
+  if (!loading && user) return <Navigate to={dest} replace />;
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -21,8 +25,7 @@ export default function Auth({ mode }: { mode: "login" | "register" }) {
     try {
       const r = await api.post<{ user: User }>(`/auth/${mode}`, { email: f.get("email"), password: f.get("password"), name: f.get("name") });
       setUser(r.user);
-      const next = params.get("next");
-      nav(next === "preparation" || next === "follow-up" ? `/app/${next}` : "/app", { replace: true });
+      nav(dest, { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
     } finally { setBusy(false); }
@@ -45,7 +48,7 @@ export default function Auth({ mode }: { mode: "login" | "register" }) {
             <button className="btn primary" style={{ width: "100%" }} disabled={busy}>{busy && <Spinner />} {isReg ? "Create account" : "Log in"}</button>
           </form>
           <p className="small muted" style={{ marginTop: "1rem", marginBottom: 0 }}>
-            {isReg ? <>Already have an account? <Link to="/login">Log in</Link></> : <>New here? <Link to="/register">Create an account</Link></>}
+            {isReg ? <>Already have an account? <Link to={`/login${keep}`}>Log in</Link></> : <>New here? <Link to={`/register${keep}`}>Create an account</Link></>}
           </p>
         </div>
         <Disclaimer compact />

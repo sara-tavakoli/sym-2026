@@ -4,6 +4,7 @@ import { api, fmtDateTime, type DashboardData } from "../lib/api";
 import { useApp } from "../lib/app-context";
 import { PrepBadge, Skeletons } from "../components/ui";
 import { Assistant } from "../components/Assistant";
+import { CircleCard } from "../components/CircleBits";
 
 type Appt = DashboardData["upcoming"][number];
 
@@ -92,6 +93,7 @@ export default function Dashboard() {
               ))}
             </section>
           </div>
+          <CircleCard />
         </>
       )}
     </div>
