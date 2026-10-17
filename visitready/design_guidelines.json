@@ -1,0 +1,219 @@
+{
+  "theme": "light",
+  "fonts": {
+    "heading": "'Lora Variable', serif",
+    "body": "'DM Sans Variable', -apple-system, BlinkMacSystemFont, sans-serif",
+    "mono": "'JetBrains Mono Variable', monospace",
+    "css_import": "@import \"@fontsource-variable/lora\";\n@import \"@fontsource-variable/dm-sans\";\n@import \"@fontsource-variable/jetbrains-mono\";"
+  },
+  "typography": {
+    "scale_px": {
+      "display": 56,
+      "h1": 42,
+      "h2": 32,
+      "h3": 22,
+      "body": 16,
+      "caption": 14
+    },
+    "rules": {
+      "headline_tracking": "tracking-tight",
+      "label_tracking": "tracking-[0.15em] uppercase text-xs font-semibold",
+      "line_height_headings": "leading-tight",
+      "line_height_body": "leading-relaxed"
+    }
+  },
+  "colors": {
+    "palette_name": "Australian Eucalyptus & Terracotta Editorial Healthcare",
+    "archetype": "Organic & Earthy with High-Trust Editorial Warmth",
+    "accent": "#0D5C4D",
+    "on_accent": "#FFFFFF",
+    "accent_secondary": "#C85A32",
+    "on_accent_secondary": "#FFFFFF",
+    "surfaces": [
+      {
+        "name": "page",
+        "kind": "solid",
+        "bg": "#FBF9F5",
+        "on_bg": "#1C2421",
+        "on_bg_muted": "#52605B",
+        "roles": {
+          "link": "#0D5C4D",
+          "accent_warm": "#C85A32",
+          "border": "#E3DED4",
+          "emergency": "#B91C1C"
+        }
+      },
+      {
+        "name": "panel",
+        "kind": "solid",
+        "bg": "#FFFFFF",
+        "on_bg": "#1C2421",
+        "on_bg_muted": "#52605B",
+        "roles": {
+          "border": "#E8E3DA",
+          "hover_bg": "#F4EFE6",
+          "badge_bg": "#E8F3EE",
+          "badge_text": "#0D5C4D"
+        }
+      },
+      {
+        "name": "inverse",
+        "kind": "solid",
+        "bg": "#172E27",
+        "on_bg": "#F5F8F7",
+        "on_bg_muted": "#ADC5BE",
+        "roles": {
+          "link": "#6EE7B7",
+          "accent_highlight": "#FBBF24"
+        }
+      },
+      {
+        "name": "emergency_banner",
+        "kind": "solid",
+        "bg": "#FEF2F2",
+        "on_bg": "#991B1B",
+        "on_bg_muted": "#7F1D1D",
+        "roles": {
+          "phone_callout": "#B91C1C",
+          "border": "#FECACA"
+        }
+      },
+      {
+        "name": "clinician_workspace",
+        "kind": "solid",
+        "bg": "#F5F7F6",
+        "on_bg": "#13231F",
+        "on_bg_muted": "#4B5E57",
+        "roles": {
+          "draft_badge_bg": "#FEF3C7",
+          "draft_badge_text": "#92400E",
+          "approved_badge_bg": "#DCFCE7",
+          "approved_badge_text": "#166534"
+        }
+      },
+      {
+        "name": "hero",
+        "kind": "image",
+        "contrast_against": "#112620",
+        "guarantee": "scrim: linear-gradient(135deg, rgba(17,38,32,0.85) 0%, rgba(20,48,40,0.65) 100%)",
+        "on_bg": "#FFFFFF",
+        "on_bg_muted": "#D1E7DF",
+        "roles": {
+          "link": "#A7F3D0",
+          "highlight": "#FCD34D"
+        }
+      }
+    ]
+  },
+  "entry_surfaces": {
+    "/": "split hero & dual journey pathways — editorial brand narrative + 3-minute demo bar left, interactive dual pathway launcher cards ('I know what I need' & 'Help me find care') right",
+    "/navigate": "guided care triage stepper — emergency 000 banner top, questionnaire cards center, non-diagnostic suggestion panel right",
+    "/clinics": "clinic directory & booking — filterable Australian clinic listings left, practitioner profiles + live interactive slot picker right",
+    "/prep": "AI appointment preparation suite — prefilled patient questionnaire left, AI 1-page brief with interactive citation chips right",
+    "/clinician": "clinician consultation cockpit — patient intake summary + consultation transcript player left, draft SOAP note generator + approval workflow right",
+    "/actions": "post-visit action tracker — stage progression stepper top, interactive verified follow-up task kanban center"
+  },
+  "motion": {
+    "engine": "motion/react (bundled)",
+    "micro_interactions": "Smooth spring physics for tab switching, card elevation, citation tag highlight pulsing",
+    "reduced_motion": "prefers-reduced-motion respected via CSS media query and Motion reduced motion config",
+    "stagger_delay": 0.05
+  },
+  "accessibility": {
+    "wcag_level": "AAA text contrast for body/headings (minimum 7:1 against warm white/cream bases), AA for graphical badges",
+    "emergency_callout": "Accessible ARIA live region for 000 ambulance warning with instant click-to-call or dial instructions",
+    "traceability_chips": "Keyboard focusable source citation badges with aria-describedby and tooltip linking patient input to AI output",
+    "testing_attributes": "All interactive inputs, buttons, stepper links, role toggles, demo reset, and stage progressors have data-testid in kebab-case"
+  },
+  "image_urls": [
+    {
+      "url": "https://images.unsplash.com/photo-1631217868264-e5b90bb7e133?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTV8MHwxfHNlYXJjaHwxfHxkb2N0b3IlMjBwYXRpZW50JTIwY29uc3VsdGF0aW9uJTIwY2xpbmljfGVufDB8fHx8MTc5MjIzNDkyOHww&ixlib=rb-4.1.0&q=85",
+      "category": "hero_and_clinician",
+      "description": "Dr. Sarah Lin consulting with patient in modern Melbourne clinic room",
+      "role": "Hero banner background & Dr. Sarah Lin practitioner profile avatar/photo"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1758691461990-03b49d969495?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTV8MHwxfHNlYXJjaHwyfHxkb2N0b3IlMjBwYXRpZW50JTIwY29uc3VsdGF0aW9uJTIwY2xpbmljfGVufDB8fHx8MTc5MjIzNDkyOHww&ixlib=rb-4.1.0&q=85",
+      "category": "consultation_workspace",
+      "description": "Doctor reviewing and annotating patient clinical notes",
+      "role": "Clinician consultation workbench visual and transcript sidebar illustration"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1505410603994-c3ac6269711f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwzfHxtb2Rlcm4lMjBtZWRpY2FsJTIwY2xpbmljJTIwZXh0ZXJpb3IlMjBpbnRlcmlvcnxlbnwwfHx8fDE3OTIyMzQ5Mjh8MA&ixlib=rb-4.1.0&q=85",
+      "category": "clinic_spaces",
+      "description": "Warm timber and stone reception at Carlton Family Medical Practice",
+      "role": "Clinic card profile preview image"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1510414890190-f33e404300b6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBtZWRpY2FsJTIwY2xpbmljJTIwZXh0ZXJpb3IlMjBpbnRlcmlvcnxlbnwwfHx8fDE3OTIyMzQ5Mjh8MA&ixlib=rb-4.1.0&q=85",
+      "category": "clinic_exterior",
+      "description": "Modern sunlit medical center facade in Fitzroy North, Victoria",
+      "role": "Clinic location header and map modal thumbnail"
+    }
+  ],
+  "component_structure": {
+    "css_entry": "/app/frontend/src/index.css",
+    "app_shell": "/app/frontend/src/App.tsx",
+    "components": [
+      {
+        "name": "HeaderNav",
+        "path": "/app/frontend/src/components/HeaderNav.tsx",
+        "description": "Fixed glassmorphism top navigation with VisitReady brand, Patient vs Clinician role demo switcher, Reset Demo button, Australian emergency 000 indicator, and active stage badge"
+      },
+      {
+        "name": "JourneyStepper",
+        "path": "/app/frontend/src/components/JourneyStepper.tsx",
+        "description": "Visual 4-stage connected progress bar: 1. Navigate & Book -> 2. Prepare Brief -> 3. Clinician Consult -> 4. Action Tracker"
+      },
+      {
+        "name": "EmergencySafetyBanner",
+        "path": "/app/frontend/src/components/EmergencySafetyBanner.tsx",
+        "description": "Australian healthcare compliance banner highlighting severe symptom red flags and Triple Zero (000) emergency guidance"
+      },
+      {
+        "name": "PathwaySelector",
+        "path": "/app/frontend/src/components/PathwaySelector.tsx",
+        "description": "Homepage two-door card selector: 'I know what I need' (direct search & booking) vs 'Help me find the right care' (guided clinical questionnaire)"
+      },
+      {
+        "name": "GuidedQuestionnaire",
+        "path": "/app/frontend/src/components/GuidedQuestionnaire.tsx",
+        "description": "Step-by-step triage intake capturing primary concern, symptom duration, previous consults, GP referral status, Australian postcode/suburb, and telehealth vs in-person preference"
+      },
+      {
+        "name": "ClinicBookingPanel",
+        "path": "/app/frontend/src/components/ClinicBookingPanel.tsx",
+        "description": "HotDoc-inspired clinic cards (Carlton Family Medical, Fitzroy Respiratory Health, Melbourne Telehealth Hub) with practitioner selector (Dr. Sarah Lin, Dr. Marcus Vance), slot picker, Medicare bulk billing tags, and consent to transfer intake data"
+      },
+      {
+        "name": "AppointmentPrepBrief",
+        "path": "/app/frontend/src/components/AppointmentPrepBrief.tsx",
+        "description": "Editable patient intake form on left; AI generated 1-Page Clinician Brief on right with clickable citation chips linking to source answers, plus 'Share with Clinician' explicit consent toggle"
+      },
+      {
+        "name": "ClinicianWorkspace",
+        "path": "/app/frontend/src/components/ClinicianWorkspace.tsx",
+        "description": "Simulated GP cockpit. Displays shared patient brief, preloaded consultation audio/transcript simulator (cough discussion between Alex & Dr. Lin), AI SOAP note draft generator (OpenAI GPT-5.2 powered with instant fallback), editable clinical assessment, and 3-step 'Generate Draft -> Edit -> Approve & Release' workflow with prominent DRAFT vs APPROVED badge"
+      },
+      {
+        "name": "FollowUpTracker",
+        "path": "/app/frontend/src/components/FollowUpTracker.tsx",
+        "description": "Patient care action center with tasks derived exclusively from approved doctor notes (e.g. Chest X-Ray referral, Amoxicillin antibiotic dosage, review consult in 7 days). Patient confirmation step before activation, Kanban status columns (To Do, In Progress, Completed), and verbatim prescription instructions"
+      },
+      {
+        "name": "DemoGuideModal",
+        "path": "/app/frontend/src/components/DemoGuideModal.tsx",
+        "description": "3-minute speedrun guide highlighting how to demonstrate the 4 stages smoothly with preloaded Alex (32yo, persistent dry cough post-viral)"
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Follow the Australian healthcare context: Emergency number is 000 (Triple Zero), currency is AUD ($), clinics are Australian GPs (e.g. Carlton Medical Centre, VIC 3053), Medicare bulk-billing / private fee cues.",
+    "Implement the full 4-stage end-to-end journey with instant state synchronization so changes in Stage 1/2 propagate to Clinician Workspace (Stage 3) and Follow-Up Actions (Stage 4).",
+    "Preload Alex's case data by default (Alex Turner, 32yo, dry hacking cough for 3 weeks, worse at night, tried OTC lozenges, no fever currently). Include a prominent 'Reset Demo' button in the header.",
+    "The AI brief and draft SOAP notes must have real interactive source citation chips (e.g. [Source: Intake Q2 - 3 weeks duration]) that highlight corresponding source inputs on hover/click.",
+    "The Clinician Workspace must strictly enforce the 'Draft' vs 'Approved & Released' state machine. Follow-up tasks in Stage 4 only unlock once the clinician clicks 'Approve & Release'.",
+    "Include an OpenAI GPT-5.2 service backend integration in FastAPI with robust heuristic fallback seed generation so the 3-minute demo is 100% resilient and instant.",
+    "Add complete testids to all buttons, tabs, inputs, and toggles: 'role-toggle-patient', 'role-toggle-clinician', 'reset-demo-btn', 'pathway-direct-btn', 'pathway-guided-btn', 'generate-brief-btn', 'share-consent-toggle', 'generate-soap-btn', 'approve-release-btn', 'task-confirm-btn'."
+  ]
+}

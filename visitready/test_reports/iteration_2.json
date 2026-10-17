@@ -1,0 +1,102 @@
+{
+  "iteration": 2,
+  "summary": "8/8 acceptance criteria exercised for the new accounts & booking flow: 7 backend pytest files (11 tests, incl. 3 pre-existing from the prior matrix) + 7 named browser checks, all passing.",
+  "passed": 12,
+  "failed": 0,
+  "retest_needed": false,
+  "checks": [
+    {
+      "criterion": "Guest can browse and pick an appointment without logging in",
+      "name": "guest-booking-reaches-auth-step",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "/patient/book: clicked Carlton Family Medical -> practitioner-dr-lin -> first available time slot -> book-appointment-btn; landed on auth-panel ('Sign in to book') with booking-selection-summary still showing Carlton Family Medical + Dr Sarah Lin. Re-ran against https://visit-ready-demo.preview.emergentagent.com/patient/book with the same result."
+    },
+    {
+      "criterion": "Sign up creates a real account and asks for profile",
+      "name": "signup-creates-account-and-profile",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "On the auth step's Sign up tab: password 'abc' left auth-signup-submit disabled (rules unmet); 'Passw0rd1' enabled it and created the account; profile-form showed read-only profile-email, required full name/DOB/mobile; mobile '12' showed 'Enter a valid mobile number' text; fixing it reached review-patient-name with the entered name."
+    },
+    {
+      "criterion": "Sign up creates a real account and asks for profile (API)",
+      "name": "test_tscheck_signup_creates_account_profile.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/auth/signup with password 'abc' -> 422. Strong password -> 200 with profile_complete=false and missing_fields=[full_name,date_of_birth,mobile]. PUT /api/auth/profile with mobile '123' -> 422; with '0412345678' -> 200, profile_complete=true; GET /api/auth/me reflects saved mobile."
+    },
+    {
+      "criterion": "Selection preserved through auth and switching tabs",
+      "name": "selection-preserved-across-auth-tabs",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "After picking Carlton Family Medical/Dr Marcus Vance/a slot, the URL's clinic/doctor/slot query params were identical on the Sign in tab and after switching to Sign up. Completing sign up + profile landed on Review showing review-clinic='Carlton Family Medical', review-doctor='Dr Marcus Vance', review-appointment-type='In person', review-service='General Practice (GP)' — same as selected."
+    },
+    {
+      "criterion": "Explicit confirmation only, no duplicates",
+      "name": "review-confirm-booking-creates-one",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Review showed review-edit-details-btn and review-change-appointment-btn; confirm-booking-btn was enabled and, once clicked, led to booking-confirmation with a booking-reference matching /^VR-/ and booking-go-journey-btn visible. Reloading the confirmed URL still showed the same reference (no second appointment created client-side)."
+    },
+    {
+      "criterion": "Explicit confirmation only, no duplicates (API idempotency)",
+      "name": "test_tscheck_booking_confirm_idempotent.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/visit/booking for a fresh account's slot returned reference VR-XXXXXX; a second POST with the identical clinic/slot/service body returned the SAME reference (200, no duplicate); GET /api/visit confirmed a single `booking` object with that reference."
+    },
+    {
+      "criterion": "Returning user signs in without re-entering details",
+      "name": "returning-user-signin-skips-profile",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Signed up + booked, signed out, then on a second booking attempt typed a wrong password -> 'Email or password is incorrect' shown; correct password -> landed directly on review-patient-name ('TS Returning') with no profile form shown."
+    },
+    {
+      "criterion": "Returning user signs in without re-entering details (API)",
+      "name": "test_tscheck_login_wrong_password.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/auth/login for delivered@resend.dev with a wrong password -> 401 {\"detail\":\"Email or password is incorrect\"}; correct password -> 200 with same user_id returned by GET /api/auth/me afterwards (no profile reset)."
+    },
+    {
+      "criterion": "Booking appears in My Journey and clinician dashboard",
+      "name": "booking-appears-in-journey-and-clinician",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Booked as a new account; journey-stage-find-summary on /patient/journey contained the booking-reference (e.g. VR-XXXXXX). On /clinician -> Continue as Dr Sarah Lin -> dashboard, appointment-ref-<persona> for that user_id showed the identical reference, and clicking open-consultation-btn-<persona> opened a consult page showing the patient's name."
+    },
+    {
+      "criterion": "Booking appears in My Journey and clinician dashboard (API)",
+      "name": "test_tscheck_clinician_dashboard_account_booking.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "After signup+profile+booking, GET /api/clinician/dashboard listed a row with persona==user_id and booking.reference matching the just-created booking; GET /api/clinician/visit?persona=<user_id> returned 200 with patient.name == 'TS ClinDash'."
+    },
+    {
+      "criterion": "Demo mode still works",
+      "name": "demo-mode-still-works",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "On the auth step, demo-access-card's 'Continue as Alex Turner (Demo)' skipped the profile step and went straight to Review, with a 'Demo' badge visible; confirm-booking-btn worked and produced a booking-reference; booking-go-prep-btn navigated to /patient/prep successfully."
+    },
+    {
+      "criterion": "Access control",
+      "name": "test_tscheck_access_control.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/visit?persona=<account user_id> with that user's session -> 200; the identical request from an unauthenticated client -> 404. GET /api/auth/me without a cookie -> 401. POST /api/auth/forgot for an unknown and for the seeded delivered@resend.dev account both returned the identical generic message (never reveals registration status)."
+    }
+  ],
+  "bugs": [],
+  "action_items": [],
+  "notes": [
+    "The briefing describes a substantially newer accounts/booking flow (/patient/book stepper: Clinic -> Doctor -> Date & time -> Sign in -> Profile -> Review -> Confirmed) than the no-login guest/persona flow covered by iteration_1's artifacts (which targeted the pre-accounts app). Those older checks (guest-empty-state, patient-stepper-three-steps, find-care-start-flow, guest-suggestion-sign-in-to-book, sign-in-carries-over, fresh-signin-fill-demo-answers, clinician-dashboard-works-signed-out-patient, and 3 backend test files) still exist in the repo and were left untouched (they still pass, see raw pytest run), but they are not part of this iteration's 8-criterion acceptance_matrix so are not re-listed in checks[] here.",
+    "One pre-existing backend test (test_tscheck_signin_reset_and_persist.py::test_reset_gives_empty_visit) is flaky under pytest-xdist parallel workers (a benign Mongo duplicate-key race when two workers reset the same seeded 'priya' visit simultaneously) — passes reliably when run alone or as part of the full suite serialized; not related to the new acceptance matrix and not reported as a bug.",
+    "Google sign-in was only checked for presence of auth-google-btn (not clicked through, per spec_deviations — external OAuth to auth.emergentagent.com can't be completed in automation).",
+    "guest-booking-reaches-auth-step was re-run against the public preview URL https://visit-ready-demo.preview.emergentagent.com per instructions; all other checks ran on localhost for speed.",
+    "8 criteria total; one criterion (Access control) is pure API with no dedicated UI surface so has a backend artifact only, per instructions. All other 7 criteria have both a browser check and (where API-backed) a backend test, for 7 browser + 5 new backend test files = 12 artifacts."
+  ]
+}

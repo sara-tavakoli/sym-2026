@@ -1,0 +1,86 @@
+{
+  "iteration": 1,
+  "summary": "7/7 acceptance criteria exercised: 3 backend pytest files (6 tests) + 7 named browser checks, all passing.",
+  "passed": 10,
+  "failed": 0,
+  "retest_needed": false,
+  "checks": [
+    {
+      "criterion": "Guest (fresh browser, localStorage cleared) sees no prefilled patient data",
+      "name": "guest-empty-state",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Cleared localStorage; header shows header-sign-in-btn/header-sign-up-btn and no patient-account-btn; /patient/prep shows prep-empty-form + brief-empty with no Alex data in body text; /patient/follow-through shows actions-locked, followthrough-empty-results-card, followthrough-empty-calendar, followthrough-empty-checklist."
+    },
+    {
+      "criterion": "Patient stepper has 3 steps; no Consult in patient view",
+      "name": "patient-stepper-three-steps",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "journey-stepper on /patient/navigate, /patient/prep, /patient/follow-through each rendered exactly 3 <li> items (stepper-find-link, stepper-prep-link, stepper-follow-link); stepper-consult-link had count 0 on all three pages."
+    },
+    {
+      "criterion": "Find care starts with 'Not sure? Tell us how you feel'",
+      "name": "find-care-start-flow",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "/patient/navigate step 1 shows exact text 'Not sure? Tell us how you feel' with q-next-btn labelled 'Start'; after Start, indicator reads 'Question 2 of 4'. From home, pathway-symptom-input 'tscheck sore throat for days' + Start landed on /patient/navigate at Question 2 of 4; navigating back to Question 1 confirmed q-concern-input held the carried-over text."
+    },
+    {
+      "criterion": "Guest gets a suggestion, then must sign in to book",
+      "name": "guest-suggestion-sign-in-to-book",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Guest completed all 4 questions manually (no persona -> no fill-demo-answers-btn, correct per useCurrentPersona); pathway-suggestion-card appeared. In clinics, selecting a slot showed confirm-booking-btn text 'Sign in to book this time'; clicking it navigated to /patient/sign-in and showed sign-in-carry-over-notice."
+    },
+    {
+      "criterion": "Guest gets a suggestion, then must sign in to book (API statelessness)",
+      "name": "test_tscheck_guest_pathway_stateless.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/pathway/suggest with a tscheck-guest concern returned 200 with a service_name; GET /api/visit?persona=alex before and after the call both showed questionnaire=null, booking=null, proving the guest suggestion never persists server-side."
+    },
+    {
+      "criterion": "Sign-in carries over and starts fresh",
+      "name": "sign-in-carries-over",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Guest flow produced a booking, then sign-in-persona-alex was clicked on /patient/sign-in; landed on /patient/prep (redirect <15s) with prep-appointment-chip showing the booked time matching the slot selected as guest; header showed patient-account-btn; brief-empty still shown (no stale Alex brief)."
+    },
+    {
+      "criterion": "Sign-in carries over and starts fresh (reset + persistence contract)",
+      "name": "test_tscheck_signin_reset_and_persist.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/visit/reset?persona=priya -> questionnaire=null, booking=null, brief=null, tasks=[]. Then POST /api/visit/questionnaire + POST /api/visit/booking (tscheck-carryover data) persisted and were confirmed via GET /api/visit; a second /api/visit/reset cleared booking/questionnaire again."
+    },
+    {
+      "criterion": "Fresh sign-in without guest data and fill button",
+      "name": "fresh-signin-fill-demo-answers",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Signed in as alex, signed out via patient-account-btn > patient-sign-out-btn, header reverted to header-sign-in-btn; signed in as Priya from header; /patient/navigate showed Question 1 of 4 with empty q-concern-input and visible fill-demo-answers-btn; clicking it filled Priya's data (location 'Brunswick VIC 3056') and advanced to Question 4 of 4; /patient/prep (no booking for Priya) showed prep-no-booking."
+    },
+    {
+      "criterion": "Clinician area still works",
+      "name": "clinician-dashboard-works-signed-out-patient",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "With patient browser session signed out, /clinician > continue-as-clinician-btn led to /clinician/dashboard listing appointment-row-alex and appointment-row-priya; opening Alex's consult (after seeding a tscheck booking via API) navigated to /clinician/consult/alex and rendered consult-heading 'Consultation · Alex Turner' and clinician-appointment-card."
+    },
+    {
+      "criterion": "Clinician area still works (dashboard/visit API contract)",
+      "name": "test_tscheck_clinician_dashboard_personas.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/clinician/dashboard returned appointments for both 'alex' and 'priya'. GET /api/visit?persona=alex and ?persona=priya both returned 200 with patient.name populated with no patient auth involved. GET /api/visit?persona=tscheck-unknown-persona correctly returned 404."
+    }
+  ],
+  "bugs": [],
+  "action_items": [],
+  "notes": [
+    "Matrix had 7 UI-facing criteria; 4 of them also have an API-bearing dimension, so 3 backend test files (test_tscheck_clinician_dashboard_personas.py covers 2 sub-assertions) were added alongside all 7 browser checks, totaling 10 artifacts across 7 criteria.",
+    "One browser check (guest-empty-state) was re-run against the public preview URL https://visit-ready-demo.preview.emergentagent.com and passed; the rest ran on localhost per instructions.",
+    "SPEC.md in /app/memory is stale relative to the briefing (describes an old no-auth version); the briefing and the live app agree on the new patient sign-in/guest model, so the briefing was used as source of truth."
+  ]
+}

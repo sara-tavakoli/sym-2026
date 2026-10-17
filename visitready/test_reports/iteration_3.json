@@ -1,0 +1,92 @@
+{
+  "iteration": 3,
+  "summary": "8/8 acceptance criteria for the new location-aware clinic search exercised: 5 backend pytest files (12 new tests, 27 total in suite) + 6 named browser checks, all passing. One browser check (empty-state+expand) was flaky on first attempt due to a UI race (radius chip click vs service-select re-render) and passed clean on rerun after waiting on data-active — classified flaky, not a bug.",
+  "passed": 11,
+  "failed": 0,
+  "retest_needed": false,
+  "checks": [
+    {
+      "criterion": "Search Macquarie Park, NSW returns geographically appropriate clinics (nearest-first, straight-line distances, no Melbourne clinics)",
+      "name": "location-search-macquarie-park-nearest-first",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "/patient/book -> location-search-input 'Macquarie Park, NSW' -> Search nearby; default radius-10 active; clinic-list order exactly [Macquarie Park Family Practice, North Ryde Movement Physio, Epping Smile Dental, Chatswood Village GP, St Leonards Skin Clinic]; no carlton-family/fitzroy-health/brunswick-dental cards; first card distance label 'X km away (straight-line)'. Also re-ran against https://visit-ready-demo.preview.emergentagent.com/patient/book with the same result."
+    },
+    {
+      "criterion": "Search Macquarie Park, NSW returns geographically appropriate clinics (API distances/order)",
+      "name": "test_tscheck_nearby_macquarie_park.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/clinics/nearby?location=Macquarie Park, NSW&radius_km=10 -> 200, distance_method=straight-line, order [Macquarie Park Family Practice 0.6, North Ryde Movement Physio 1.7, Epping Smile Dental 4.2, Chatswood Village GP 5.3, St Leonards Skin Clinic 8.0] within tolerance of briefing values; no Melbourne clinic ids in response."
+    },
+    {
+      "criterion": "Search Chatswood, NSW returns correct 5km/10km sets in distance order (API)",
+      "name": "test_tscheck_nearby_chatswood.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/clinics/nearby?location=Chatswood, NSW&radius_km=5 -> 200, clinics=[Chatswood Village GP, St Leonards Skin Clinic] only. radius_km=10 -> adds North Ryde Movement Physio, Macquarie Park Family Practice, Town Hall Medical Centre, Epping Smile Dental, all sorted ascending by distance_km."
+    },
+    {
+      "criterion": "Search Sydney CBD, NSW returns correct 5km/10km sets (API)",
+      "name": "test_tscheck_nearby_sydney_cbd.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/clinics/nearby?location=Sydney CBD, NSW&radius_km=5 -> 200, clinics=[Town Hall Medical Centre, Surry Hills Mind & Body, Bondi Junction Health]. radius_km=10 -> adds St Leonards Skin Clinic and Chatswood Village GP."
+    },
+    {
+      "criterion": "Radius changes results (chips update list + URL)",
+      "name": "location-radius-changes-results",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Macquarie Park search: 10km shows 5 in-person cards; clicking radius-5 updates URL to radius=5&loc=... and hides Chatswood/St Leonards while Macquarie Park GP stays; clicking radius-50 updates URL to radius=50 and reveals Parramatta Family Doctors card."
+    },
+    {
+      "criterion": "Radius changes results — 20/50km include Parramatta, invalid radius rejected (API)",
+      "name": "test_tscheck_nearby_radius_variants.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "radius_km=20 and 50 both include 'Parramatta Family Doctors' (~12.1km from Macquarie Park); radius_km=5 excludes it and St Leonards; radius_km in [7,1,100] all -> 422 with 'radius_km must be one of [5, 10, 20, 50]'."
+    },
+    {
+      "criterion": "Empty state + expand radius (Sydney CBD, Dental service, 5km)",
+      "name": "location-empty-state-expand-radius",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Sydney CBD @ radius-5 + clinic-service-select=dental shows clinic-empty-state with expand-radius-btn text 'Expand search to 10 km'; clicking it updates URL to radius=10. First attempt failed transiently (radius chip click raced with service-select causing button to read '20 km'); waiting on radius-5's data-active attribute before selecting the service fixed it and it passed clean on rerun -> classified flaky (UI race in the test, not a backend data defect; confirmed via curl the API itself returns the expected set at each radius)."
+    },
+    {
+      "criterion": "Geocoding failure is clear (UI error + no misleading list)",
+      "name": "location-geocoding-failure-error",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Searching 'zzqqxx nowhere' shows location-error with text containing \"couldn't find\" and 'Australia'; clinic-list renders zero clinic-card-* elements. One console 404 logged for the underlying API call (expected, non-blocking)."
+    },
+    {
+      "criterion": "Geocoding failure returns 404/422 (API)",
+      "name": "test_tscheck_nearby_geocoding_failure.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/clinics/nearby?location=zzqqxx nowhere -> 404 {\"detail\":\"We couldn't find \\\"zzqqxx nowhere\\\" in Australia...\"}; same location with radius_km=7 -> 422 'radius_km must be one of [5, 10, 20, 50]'."
+    },
+    {
+      "criterion": "Filters preserved; telehealth shown separately with no distance",
+      "name": "location-filters-and-telehealth-separate",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "After Macquarie Park search, 'Available online — no distance' section shows Melbourne Telehealth Hub card with 'Online — no distance' label, 'Fictional demo' badge, and no 'km away' text. Appointment-type=telehealth hides all in-person cards but keeps the online card; switching to in_person hides the online card; service=physio then narrows in-person list to North Ryde Movement Physio only."
+    },
+    {
+      "criterion": "Booking still works after location search",
+      "name": "location-booking-still-works-after-search",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Macquarie Park search -> clinic-card-macquarie-park-gp -> practitioner-dr-chen -> first time slot -> book-appointment-btn -> demo-continue-alex -> review-patient-name 'Alex Turner' with review-clinic showing Macquarie Park Family Practice -> confirm-booking-btn -> booking-confirmation with non-empty booking-reference."
+    }
+  ],
+  "bugs": [],
+  "action_items": [],
+  "notes": [
+    "Matrix had 8 criteria; covered with 11 artifacts (5 backend test files, 6 browser checks) since several criteria are both API-backed and UI-facing.",
+    "Full backend suite (27 tests across 12 files, including 15 pre-existing from prior iterations) passes with no regressions."
+  ]
+}
