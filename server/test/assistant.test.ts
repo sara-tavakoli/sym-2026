@@ -226,3 +226,13 @@ test("emergency screen unit cases", () => {
   assert.equal(screenEmergency("I have a GP appointment on Friday about headaches"), null);
   assert.equal(screenEmergency("help me prepare questions"), null);
 });
+
+test("rules guide covers sharing with a clinician and the care circle", async () => {
+  const c = await user("guide2@example.com");
+  setAiClient(null);
+  const circle = await c.call("POST", "/api/assistant/chat", say("I want to invite my mum to help with my tasks"));
+  assert.equal(circle.data.intent, "care_circle");
+  assert.equal(circle.data.actions[0].href, "/app/circle");
+  const share = await c.call("POST", "/api/assistant/chat", say("How do I share my brief with my GP?"));
+  assert.equal(share.data.intent, "share");
+});

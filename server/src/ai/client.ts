@@ -16,6 +16,10 @@ export class AiError extends Error {
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
+// Each Groq model has its own per-minute token budget, so a second model doubles capacity before falling back further.
+const GROQ_MODELS = (process.env.GROQ_MODELS || process.env.GROQ_MODEL || "openai/gpt-oss-120b,openai/gpt-oss-20b").split(",").map((m) => m.trim()).filter(Boolean);
+const GROQ_MODEL = GROQ_MODELS[0];
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 // These are short structured tasks whose output is verified server-side, so deep reasoning isn't needed.
 // LOW thinking measured noticeably faster and more consistent than the model default; "default" disables the override.
 const THINKING_LEVEL = (process.env.GEMINI_THINKING_LEVEL || "low").toUpperCase();
@@ -114,6 +118,37 @@ export function createClaudeClient(messages: ClaudeMessages, model = CLAUDE_MODE
   };
 }
 
+/** Groq's OpenAI-compatible chat API with JSON-schema output; `fetchImpl` lets tests run without network access. */
+export function createGroqClient(apiKey: string, model = GROQ_MODEL, fetchImpl: typeof fetch = fetch): AiClient {
+  return {
+    async json({ system, user, schema }, signal) {
+      let res: Response;
+      try {
+        res = await fetchImpl(GROQ_URL, {
+          method: "POST", signal,
+          headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+          body: JSON.stringify({
+            model, temperature: 0.1,
+            messages: [{ role: "system", content: system }, { role: "user", content: user }],
+            response_format: { type: "json_schema", json_schema: { name: "result", strict: false, schema: strictSchema(schema) } },
+          }),
+        });
+      } catch (e) {
+        if (signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
+        throw new AiError("The AI service is not reachable. Please try again.", 503);
+      }
+      if (res.status === 429) throw new AiError("The AI service is busy right now. Please try again in a minute.", 429);
+      if (res.status === 401 || res.status === 403) throw new AiError("The AI service is not configured correctly.", 503);
+      if (res.status === 404) throw new AiError("The configured AI model is not available.", 503);
+      if (res.status >= 500) throw new AiError("The AI service is not reachable. Please try again.", 503);
+      if (!res.ok) throw new AiError("The AI service returned an error.", 502);
+      const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+      // Non-JSON output throws here and is retried once by generate().
+      return JSON.parse(data.choices?.[0]?.message?.content ?? "");
+    },
+  };
+}
+
 /** Tries each provider in order; a provider-side failure (not a timeout) falls through to the next one. */
 export function withFallback(clients: AiClient[]): AiClient {
   return {
@@ -136,14 +171,17 @@ const providers = () => {
   const list: { name: string; model: string; make: () => AiClient }[] = [];
   if (process.env.GEMINI_API_KEY) list.push({ name: "google-gemini", model: GEMINI_MODEL, make: () => createGeminiClient(new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! }).models) });
   if (process.env.ANTHROPIC_API_KEY) list.push({ name: "anthropic-claude", model: CLAUDE_MODEL, make: () => createClaudeClient(new Anthropic().beta.messages) });
-  return process.env.AI_PROVIDER === "claude" ? list.reverse() : list;
+  if (process.env.GROQ_API_KEY) for (const m of GROQ_MODELS) list.push({ name: "groq", model: m, make: () => createGroqClient(process.env.GROQ_API_KEY!, m) });
+  // AI_PROVIDER moves one provider to the front; the others stay as fallbacks in their usual order.
+  const first = list.findIndex((p) => p.name.includes(process.env.AI_PROVIDER ?? "\0"));
+  return first > 0 ? [list[first], ...list.filter((_, i) => i !== first)] : list;
 };
 
 let defaultClient: AiClient | null = null;
 function getDefaultClient(): AiClient {
   if (defaultClient) return defaultClient;
   const list = providers();
-  if (!list.length) throw new AiError("AI features are not configured on this server (set GEMINI_API_KEY or ANTHROPIC_API_KEY).", 503);
+  if (!list.length) throw new AiError("AI features are not configured on this server (set GEMINI_API_KEY, ANTHROPIC_API_KEY or GROQ_API_KEY).", 503);
   defaultClient = withFallback(list.map((p) => p.make()));
   return defaultClient;
 }
@@ -167,7 +205,7 @@ export const aiInfo = () => {
   const list = providers();
   return {
     provider: list[0]?.name ?? "google-gemini", model: list[0]?.model ?? GEMINI_MODEL,
-    ...(list[1] ? { fallback: list[1].name } : {}), configured: list.length > 0 || !!override,
+    ...(list[1] ? { fallback: list[1].name === list[0].name ? `${list[1].name} (${list[1].model})` : list[1].name } : {}), configured: list.length > 0 || !!override,
   };
 };
 

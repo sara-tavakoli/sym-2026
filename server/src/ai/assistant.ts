@@ -2,7 +2,7 @@ import { z } from "zod";
 import { generate, withRulesFallback } from "./client.js";
 import { PREF_ITEMS_SCHEMA, PREFERENCE_RULES, prefItem } from "./preferences.js";
 
-export const INTENTS = ["prepare", "find_provider", "follow_up", "symptom_question", "emergency", "general", "out_of_scope"] as const;
+export const INTENTS = ["prepare", "share", "find_provider", "follow_up", "care_circle", "symptom_question", "emergency", "general", "out_of_scope"] as const;
 export type Intent = (typeof INTENTS)[number];
 export interface ChatMessage { role: "user" | "assistant"; content: string }
 
@@ -21,7 +21,7 @@ Your only job is to help people find their way around CarePath and guide them to
 What you can do:
 - Help the user get ready for an appointment: invite them to describe, in their own words, their main concern, when it started, what they have noticed, and the questions they want to ask. Ask at most one or two short, NON-diagnostic clarifying questions at a time (e.g. "When did this start?", "What would you most like to ask?", "Is there anything you want to remember to bring?"). Once they have shared some details, tell them they can press "Create a brief from this conversation" below to turn their own words into an editable draft brief (they can attach it to an appointment later).
 - Help them find a suitable service with Fit Finder: when they describe what they are looking for (type of service, suburb, days/times, telehealth, accessibility, bulk billing, language), briefly acknowledge it and say their preferences are shown below to check and edit before searching. CarePath then searches its directory — you never do.
-- Explain how to use CarePath: appointments, AI Preparation, Fit Finder, and the Follow-up tracker (turns clinician instructions into a checklist).
+- Explain how to use CarePath: appointments (or import a booking confirmation), AI Preparation, sharing a brief with a clinician through an expiring link (the clinician ticks off questions and sends back a plan), the Follow-up tracker (turns clinician instructions into a checklist with due dates), the Care circle (invite family or a carer as a viewer or helper who can take on tasks), and Fit Finder.
 - Practical appointment-day reminders that CarePath can hold for them (e.g. add "bring my Medicare card" to the notes section of their brief).
 
 Limits you must respect:
@@ -41,7 +41,7 @@ Style: warm, plain Australian English, short (under 120 words), plain text only 
 When intent is "find_provider", also fill "preferences" from the user's messages in this conversation (otherwise return an empty array).
 ${PREFERENCE_RULES}
 
-Intent values: "prepare" (getting ready for an appointment), "find_provider" (looking for a clinic/practitioner/service), "follow_up" (instructions or tasks after a visit), "symptom_question", "emergency", "general" (questions about how to use CarePath), "out_of_scope" (anything else).`;
+Intent values: "prepare" (getting ready for an appointment), "share" (sharing a brief with a clinician or getting their plan back), "care_circle" (family, carers or someone helping them), "find_provider" (looking for a clinic/practitioner/service), "follow_up" (instructions or tasks after a visit), "symptom_question", "emergency", "general" (questions about how to use CarePath), "out_of_scope" (anything else).`;
 
 // Deterministic safety layers around the model.
 const EMERGENCY = /\b(chest pain|can'?t breathe|cannot breathe|difficulty breathing|struggling to breathe|not breathing|unconscious|passed out|severe bleeding|bleeding heavily|stroke|face (is )?drooping|overdos\w*|anaphyla\w*|seizure|suicid\w*|kill (my|him|her)self|end (my|it all|my life)|self[- ]harm|hurt(ing)? myself)\b/i;
@@ -74,6 +74,10 @@ export const OUT_OF_SCOPE_REPLY =
 // Without a model (or when it's unavailable), a keyword guide picks the feature and replies with fixed text.
 const RULES: [Exclude<Intent, "emergency" | "out_of_scope">, RegExp, string][] = [
   ["symptom_question", /\b(what(?:'s| is) wrong|what could (?:it|this) be|is it serious|should i (?:take|be worried)|what (?:should|can) i take|diagnos\w*|is this normal|why (?:do|does|am) i)\b/i, SAFE_FALLBACK_TEXT()],
+  ["care_circle", /\b(invite|family|carer|caregiver|mum|mom|dad|parent|partner|husband|wife|sister|brother|daughter|son|grandma|grandpa|someone (?:to )?help|help me with (?:my )?tasks|care circle)\b/i,
+    "Open Care circle to invite a family member or carer. Choose Viewer (sees upcoming appointments, confirmed briefs and tasks) or Helper (can also take on and complete tasks). You send them the invite link yourself, and you can remove them at any time."],
+  ["share", /\b(share|send (?:it|my brief) to|show (?:my|the) (?:gp|doctor|clinician)|clinician|doctor see|link for my (?:gp|doctor))\b/i,
+    "Open the appointment and use \"Share with your clinician\" to create a secure link that expires. Your GP can open it without an account, tick off your questions during the visit, and send back an after-visit plan that you can turn into a checklist. You can revoke the link any time."],
   ["follow_up", /\b(after (?:my|the) (?:visit|appointment)|instructions?|told me to|follow[- ]?up|checklist|tasks?|to-?do|referral|test results?|plan from)\b/i,
     "After a visit, paste the instructions you were given into the appointment's \"After the visit\" section and CarePath turns them into a checklist with due dates. Overdue or unclear items show up on your dashboard. Open the Follow-up tracker to see everything in one place."],
   ["find_provider", /\b(find|looking for|search(?:ing)?|near(?:by)?|bulk[- ]?bill\w*|clinic|dentist|physio\w*|psycholog\w*|pharmac\w*|telehealth|gp near|which (?:doctor|clinic)|open on|saturday|sunday|wheelchair)\b/i,

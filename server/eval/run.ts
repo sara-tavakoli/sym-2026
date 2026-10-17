@@ -3,8 +3,8 @@
 import { generateBrief, quoteInField, FIELDS, SECTIONS, type PrepInput } from "../src/ai/brief.js";
 import { extractTasks } from "../src/ai/tasks.js";
 
-if (!process.env.GEMINI_API_KEY) {
-  console.error("GEMINI_API_KEY is not set. The eval calls the real model; set the key in .env to run it.");
+if (!process.env.GEMINI_API_KEY && !process.env.ANTHROPIC_API_KEY && !process.env.GROQ_API_KEY) {
+  console.error("No AI key is set (GEMINI_API_KEY, ANTHROPIC_API_KEY or GROQ_API_KEY). The eval calls the real model; set a key in .env to run it.");
   process.exit(2);
 }
 

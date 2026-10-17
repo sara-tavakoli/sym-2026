@@ -63,3 +63,21 @@ test("withFallback does not retry a refusal on another provider", async () => {
   await assert.rejects(withFallback([refuse, other]).json(req, signal), (e) => e instanceof AiError && e.status === 422);
   assert.equal(second, false);
 });
+
+test("Groq adapter sends a JSON-schema request and maps errors", async () => {
+  const { createGroqClient } = await import("../src/ai/client.js");
+  const sent: { url: string; body: any; auth: string }[] = [];
+  const ok = (async (url: string, init: RequestInit) => {
+    sent.push({ url, body: JSON.parse(init.body as string), auth: (init.headers as Record<string, string>).authorization });
+    return new Response(JSON.stringify({ choices: [{ message: { content: '{"a":{"b":"ok"}}' } }] }), { status: 200 });
+  }) as unknown as typeof fetch;
+  assert.deepEqual(await createGroqClient("k", "m", ok).json(req, signal), { a: { b: "ok" } });
+  assert.equal(sent[0].auth, "Bearer k");
+  assert.equal(sent[0].body.model, "m");
+  assert.equal(sent[0].body.response_format.type, "json_schema");
+  assert.equal(sent[0].body.response_format.json_schema.schema.additionalProperties, false);
+  const status = (code: number) => (async () => new Response("{}", { status: code })) as unknown as typeof fetch;
+  for (const [code, want] of [[429, 429], [401, 503], [500, 503], [400, 502]] as const) {
+    await assert.rejects(createGroqClient("k", "m", status(code)).json(req, signal), (e) => e instanceof AiError && e.status === want);
+  }
+});
