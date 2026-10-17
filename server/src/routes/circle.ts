@@ -35,7 +35,7 @@ export function isHelper(ownerId: string, memberId: string) {
   return !!db.prepare("SELECT 1 FROM care_members WHERE owner_id = ? AND member_id = ? AND role = 'helper'").get(ownerId, memberId);
 }
 
-const quote = (title: string) => `'${title.length > 80 ? title.slice(0, 77) + "..." : title}'`;
+const quote = (title: string) => `“${title.length > 80 ? title.slice(0, 77) + "…" : title}”`; // same curly quotes as the seeded demo activity
 const userName = (id: string) => (db.prepare("SELECT name FROM users WHERE id = ?").get(id) as { name: string } | undefined)?.name ?? "someone";
 
 /** Hook for the patient's own task route: logs completion and assignment, but only once a circle exists. */
