@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { createHash, randomBytes } from "node:crypto";
 import { z } from "zod";
+import rateLimit from "express-rate-limit";
 import { db } from "../db.js";
 import "../schema-circle.js";
 import { newId, requireAuth } from "../auth.js";
@@ -69,15 +70,21 @@ function findInvite(token: string) {
 }
 const inviteState = (i: InviteRow) => (i.cancelled_at ? "cancelled" : i.accepted_at ? "accepted" : i.expires_at <= now() ? "expired" : "pending");
 
+// Public invite endpoints are rate limited per IP, like the clinician share links.
+const joinLimiter = rateLimit({
+  windowMs: 15 * 60_000, limit: 60, standardHeaders: true, legacyHeaders: false,
+  message: { error: "Too many attempts. Please wait a few minutes and try again." },
+});
+
 // Anyone holding the link may see who sent it (the token is the secret); no emails are returned.
-circleRouter.get("/join/:token", (req, res) => {
+circleRouter.get("/join/:token", joinLimiter, (req, res) => {
   const parsed = tokenParam.safeParse(param(req, "token"));
   const inv = parsed.success ? findInvite(parsed.data) : undefined;
   if (!inv) return res.status(404).json({ error: "This invite link is not valid. Ask for a new one." });
   res.json({ owner_name: inv.owner_name, name: inv.name, role: inv.role, state: inviteState(inv), expires_at: inv.expires_at });
 });
 
-circleRouter.post("/join/:token", requireAuth, (req, res) => {
+circleRouter.post("/join/:token", joinLimiter, requireAuth, (req, res) => {
   const parsed = tokenParam.safeParse(param(req, "token"));
   const inv = parsed.success ? findInvite(parsed.data) : undefined;
   if (!inv) return res.status(404).json({ error: "This invite link is not valid. Ask for a new one." });
