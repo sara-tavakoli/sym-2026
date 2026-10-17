@@ -28,7 +28,7 @@ export function Layout() {
       <a className="skip" href="#main">Skip to content</a>
       <div className="shell">
         <aside className="sidebar">
-          <Link to="/app" className="brand"><Logo size={26} /> CarePath AI</Link>
+          <Link to="/app" className="brand" aria-label="CarePath AI, dashboard"><Logo size={28} /><span className="wordmark">CarePath</span><span className="wordmark-ai">AI</span></Link>
           <nav className="nav" aria-label="Main">
             {groups.map((g, i) => (
               <div className="nav-group" key={i} role="group" aria-label={g.label ?? "Overview"}>
@@ -42,6 +42,7 @@ export function Layout() {
           <div className="side-foot">
             <NavLink to={settings.to} className="side-link"><Icon name={settings.icon} /> {settings.label}</NavLink>
             <div className="side-user">
+              <span className="avatar" aria-hidden="true">{(user?.name ?? "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}</span>
               <span className="side-name" title={user?.email}>{user?.name}</span>
               <button className="link-btn" onClick={logout}>Log out</button>
             </div>
@@ -49,7 +50,7 @@ export function Layout() {
         </aside>
         <div>
           <header className="topbar">
-            <Link to="/app" className="brand"><Logo size={24} /> CarePath AI</Link>
+            <Link to="/app" className="brand" aria-label="CarePath AI, dashboard"><Logo size={26} /><span className="wordmark">CarePath</span><span className="wordmark-ai">AI</span></Link>
             <div className="row" style={{ gap: ".25rem" }}>
               <NavLink to="/app/settings" className="btn sm ghost" aria-label="Settings"><Icon name="gear" /></NavLink>
               <button className="btn sm ghost" onClick={logout}>Log out</button>

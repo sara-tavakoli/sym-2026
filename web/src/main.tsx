@@ -1,6 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import "@fontsource-variable/figtree";
+import "@fontsource-variable/source-serif-4/opsz.css";
 import "./styles.css";
 import { AppProvider, useApp } from "./lib/app-context";
 import { Layout } from "./components/Layout";

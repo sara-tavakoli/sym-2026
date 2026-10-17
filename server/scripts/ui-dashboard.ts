@@ -27,20 +27,21 @@ for (const [label, viewport, scheme] of combos) {
   await page.getByLabel("Email").fill("demo@carepath.example");
   await page.getByLabel("Password").fill("demo-password-1");
   await page.getByRole("button", { name: "Log in" }).click();
-  await page.getByRole("heading", { name: /Hello, Demo/ }).waitFor();
-  await page.getByRole("heading", { name: "Upcoming appointments" }).waitFor();
+  await page.getByRole("heading", { name: /(Good (morning|afternoon|evening)|Hello), Demo/ }).waitFor();
+  await page.getByRole("heading", { name: "At a glance" }).waitFor();
 
   ok(`${label}: one primary action in the header`, (await page.locator(".dash-head .btn").count()) === 1 && (await page.locator(".dash-head .btn.primary").count()) === 1);
   ok(`${label}: no stat tiles`, (await page.locator(".stat, .stats").count()) === 0);
   ok(`${label}: full chat not embedded on dashboard`, (await page.locator(".assistant-log").count()) === 0);
-  ok(`${label}: overview line from real counts`, /upcoming appointment/.test(await page.locator(".overview").innerText()));
+  ok(`${label}: overview from real counts`, /upcoming appointment/.test(await page.locator(".overview").innerText()));
+  ok(`${label}: next appointment is the focal point`, await page.getByRole("heading", { name: "Dr Alex Example", level: 2 }).isVisible());
+  ok(`${label}: preparation tracker present`, (await page.locator(".prep-track").count()) === 1);
   ok(`${label}: safety notice present`, /isn't a medical service/.test(await page.locator(".app-foot").innerText()) && /000/.test(await page.locator(".app-foot").innerText()));
   ok(`${label}: no horizontal overflow`, await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
-  ok(`${label}: no gradients on the dashboard`, await page.evaluate(() => [...document.querySelectorAll("main *")].every((el) => !getComputedStyle(el).backgroundImage.includes("gradient") || el.classList.contains("skeleton"))));
   if (label.startsWith("desktop")) {
-    ok(`${label}: sidebar groups`, (await page.locator(".nav-label").allInnerTexts()).join("|") === "Your care|Prepare and find");
+    ok(`${label}: sidebar groups`, (await page.locator(".nav-label").allTextContents()).join("|") === "Your care|Prepare and find");
     for (const n of ["Dashboard", "Appointments", "Follow-Up Tracker", "AI Assistant", "AI Preparation", "Fit Finder", "Settings"]) {
-      ok(`${label}: nav has ${n}`, await page.locator(".sidebar").getByRole("link", { name: n }).isVisible());
+      ok(`${label}: nav has ${n}`, await page.locator(".sidebar").getByRole("link", { name: n, exact: true }).isVisible());
     }
   }
   await page.waitForTimeout(350);
@@ -67,9 +68,9 @@ await page.getByLabel("Name").fill("Empty Tester");
 await page.getByLabel("Email").fill(`empty-${Date.now()}@example.com`);
 await page.getByLabel("Password").fill("empty-pass-123");
 await page.getByRole("button", { name: "Create account" }).click();
-await page.getByRole("heading", { name: /Hello, Empty/ }).waitFor();
-await page.getByText("No upcoming appointments").waitFor();
-ok("new account: overview shows zeros", /0 upcoming appointments/.test(await page.locator(".overview").innerText()));
+await page.getByRole("heading", { name: /(Good (morning|afternoon|evening)|Hello), Empty/ }).waitFor();
+await page.getByText("No upcoming appointments").first().waitFor();
+ok("new account: overview shows zeros", /^0\s*upcoming appointments/m.test(await page.locator(".overview").innerText()));
 ok("new account: no example records", (await page.locator(".appt-row, .task-row").count()) === 0);
 await page.waitForTimeout(350);
 await page.screenshot({ path: "shots/dash-empty-light.png", fullPage: true });

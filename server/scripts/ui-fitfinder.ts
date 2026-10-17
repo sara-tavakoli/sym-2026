@@ -21,12 +21,12 @@ for (const [label, viewport, scheme] of [["desktop-light", { width: 1280, height
   await page.getByLabel("Email").fill("demo@carepath.example");
   await page.getByLabel("Password").fill("demo-password-1");
   await page.getByRole("button", { name: "Log in" }).click();
-  await page.getByRole("heading", { name: /Hello, Demo/ }).waitFor();
+  await page.getByRole("heading", { name: /(Good (morning|afternoon|evening)|Hello), Demo/ }).waitFor();
 
   // Navigation
   if (label === "desktop-light") {
     for (const n of ["Dashboard", "Appointments", "AI Assistant", "AI Preparation", "Fit Finder", "Follow-Up Tracker", "Settings"]) {
-      ok(`sidebar has ${n}`, await page.locator(".sidebar").getByRole("link", { name: n }).isVisible());
+      ok(`sidebar has ${n}`, await page.locator(".sidebar").getByRole("link", { name: n, exact: true }).isVisible());
     }
     await page.locator(".sidebar").getByRole("link", { name: "Fit Finder" }).click();
   } else {

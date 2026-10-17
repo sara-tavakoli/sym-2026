@@ -82,7 +82,7 @@ for (const [label, viewport, scheme] of [["desktop-light", { width: 1280, height
     await page.screenshot({ path: `shots/assistant-${label}-chat.png`, fullPage: true });
 
     // conversation carries to the AI Assistant page (memory) and is gone after reload (not persisted)
-    await page.locator(".sidebar").getByRole("link", { name: "Dashboard" }).click();
+    await page.locator(".sidebar").getByRole("link", { name: "Dashboard", exact: true }).click();
     await page.locator(".sidebar").getByRole("link", { name: "AI Assistant" }).click();
     await page.waitForURL(/\/app\/assistant$/);
     ok("conversation kept when returning to the AI Assistant page", (await page.locator(".msg-user").count()) === 5);

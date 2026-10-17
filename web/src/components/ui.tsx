@@ -6,9 +6,12 @@ export function Logo({ size = 32 }: { size?: number }) {
   const id = useId();
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-      <defs><linearGradient id={id} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#14b8a6" /><stop offset="1" stopColor="#2563eb" /></linearGradient></defs>
-      <rect width="32" height="32" rx="9" fill={`url(#${id})`} />
-      <path d="M8 17l5 5 11-12" stroke="#fff" strokeWidth="3.2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      {/* A path from a starting point to a destination: the journey either side of an appointment. */}
+      <defs><linearGradient id={id} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#11806f" /><stop offset="1" stopColor="#0b5c52" /></linearGradient></defs>
+      <rect width="32" height="32" rx="8.5" fill={`url(#${id})`} />
+      <path d="M10 22.5C10 16 14.5 11.5 21 11.5" stroke="#fff" strokeOpacity=".92" strokeWidth="2.3" fill="none" strokeLinecap="round" />
+      <circle cx="10" cy="22.5" r="2.1" fill="#fff" />
+      <circle cx="21.6" cy="11.4" r="3.2" fill="#0b5c52" stroke="#fff" strokeWidth="2" />
     </svg>
   );
 }

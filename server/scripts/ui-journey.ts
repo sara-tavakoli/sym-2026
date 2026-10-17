@@ -14,7 +14,7 @@ await page.getByLabel("Name").fill("Journey Tester");
 await page.getByLabel("Email").fill(email);
 await page.getByLabel("Password").fill("journey-pass-1");
 await page.getByRole("button", { name: "Create account" }).click();
-await page.getByRole("heading", { name: /Hello, Journey/ }).waitFor();
+await page.getByRole("heading", { name: /(Good (morning|afternoon|evening)|Hello), Journey/ }).waitFor();
 step("registered and landed on an empty dashboard");
 if ((await page.getByText("No upcoming appointments").count()) < 1) throw new Error("new user dashboard not empty");
 
