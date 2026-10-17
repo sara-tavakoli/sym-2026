@@ -855,3 +855,5 @@ input[type="radio"]:focus-visible, input[type="checkbox"]:focus-visible { outlin
 .task-who { color: var(--text); font-weight: 500; }
 span.task-check { width: 0; }
 .task-list + .group-title { margin-top: 1rem; }
+.item .item-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
+@media (max-width: 600px) { .item.wrap .item-body { flex: 1 1 calc(100% - 60px); } .item.wrap > .item-body + * { margin-left: calc(42px + .9rem); } }

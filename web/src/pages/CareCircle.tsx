@@ -114,7 +114,8 @@ export default function CareCircle() {
                 <Avatar name={m.name} />
                 <div className="item-body">
                   <div className="item-title">{m.name}</div>
-                  <div className="item-sub">{m.email} · since {fmtDay(m.created_at)}{m.open_tasks ? ` · ${m.open_tasks} open task${m.open_tasks === 1 ? "" : "s"}` : ""}</div>
+                  <div className="item-sub item-email">{m.email}</div>
+                  <div className="item-sub">Since {fmtDay(m.created_at)}{m.open_tasks ? ` · ${m.open_tasks} open task${m.open_tasks === 1 ? "" : "s"}` : ""}</div>
                 </div>
                 <select aria-label={`Role for ${m.name}`} value={m.role}
                   onChange={(e) => act(() => api.patch(`/circle/members/${m.id}`, { role: e.target.value }), `${m.name} is now a ${ROLE_LABELS[e.target.value as CircleRole]}`)}>
@@ -128,7 +129,7 @@ export default function CareCircle() {
 
             {data.invites.length > 0 && (
               <>
-                <h3 style={{ marginTop: "1.25rem" }}>Pending invites</h3>
+                <h3 className="group-title" style={{ marginTop: "1.25rem" }}>Pending invites</h3>
                 {data.invites.map((i) => (
                   <div key={i.id} className="item wrap">
                     <Avatar name={i.name} />
