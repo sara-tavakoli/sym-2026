@@ -7,4 +7,4 @@ COPY . .
 RUN npm run build
 ENV NODE_ENV=production PORT=8080 DATABASE_PATH=/data/carepath.db TRUST_PROXY=1
 EXPOSE 8080
-CMD ["npm", "start"]
+CMD ["node", "--import", "tsx", "server/src/index.ts"]
