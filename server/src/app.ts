@@ -6,6 +6,7 @@ import { resolve } from "node:path";
 import { ZodError } from "zod";
 import "./db.js";
 import "./schema-circle.js";
+import "./schema-shares.js";
 import { authRouter } from "./routes/auth.js";
 import { appointmentsRouter } from "./routes/appointments.js";
 import { dashboardRouter } from "./routes/dashboard.js";
@@ -16,6 +17,7 @@ import { assistantRouter } from "./routes/assistant.js";
 import { draftsRouter } from "./routes/drafts.js";
 import { fitFinderRouter } from "./routes/fit-finder.js";
 import { circleRouter, supportingRouter } from "./routes/circle.js";
+import { publicShareRouter, shareHeaders, sharesRouter } from "./routes/shares.js";
 import { ensureDemoDirectory } from "./providers/demo-data.js";
 import { demoRouter, purgeDemoAccounts } from "./demo.js";
 
@@ -37,6 +39,7 @@ export function createApp() {
   app.get("/api/ai/info", (_req, res) => res.json(aiInfo()));
   app.use("/api/appointments/:id", prepRouter);
   app.use("/api/appointments/:id", instructionsRouter);
+  app.use("/api/appointments/:id", sharesRouter);
   app.use("/api/appointments", appointmentsRouter);
   app.use("/api/tasks", tasksRouter);
   app.use("/api/assistant", assistantRouter);
@@ -45,13 +48,15 @@ export function createApp() {
   app.use("/api/dashboard", dashboardRouter);
   app.use("/api/circle", circleRouter);
   app.use("/api/supporting", supportingRouter);
+  app.use("/api/share", publicShareRouter);
   app.use("/api", (_req, res) => res.status(404).json({ error: "Not found" }));
 
   // Serve the built frontend (single deployable). Unknown paths fall back to the SPA shell.
   const dist = resolve("web/dist");
   if (existsSync(dist)) {
+    app.use("/c", shareHeaders); // clinician share page: keep the token out of referrers and search indexes
     app.use(express.static(dist));
-    app.get(/^(?!\/api).*/, (_req, res) => res.sendFile(resolve(dist, "index.html")));
+    app.get(/^(?!\/api).*/, (_req, res) => res.sendFile("index.html", { root: dist })); // root option: a dot-folder in the install path (e.g. .claude/) must not 404
   }
 
   const onError: ErrorRequestHandler = (err, _req, res, _next) => {

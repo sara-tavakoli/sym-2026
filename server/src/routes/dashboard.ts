@@ -12,7 +12,8 @@ dashboardRouter.get("/", (req, res) => {
   const apptCols = `a.id, a.starts_at, a.practitioner_name, a.service_type, a.clinic_name,
     COALESCE((SELECT b.status FROM appointment_briefs b WHERE b.appointment_id = a.id),
              CASE WHEN EXISTS (SELECT 1 FROM preparation_notes p WHERE p.appointment_id = a.id) THEN 'notes' END,
-             'none') AS prep_status`;
+             'none') AS prep_status,
+    (SELECT COUNT(*) FROM clinician_plans cp WHERE cp.appointment_id = a.id AND cp.imported_at IS NULL) AS pending_plans`;
 
   const upcoming = db.prepare(`SELECT ${apptCols} FROM appointments a WHERE a.user_id = ? AND a.starts_at >= ? ORDER BY a.starts_at ASC LIMIT 5`).all(uid, now);
   const recent = db.prepare(`SELECT ${apptCols} FROM appointments a WHERE a.user_id = ? AND a.starts_at < ? ORDER BY a.starts_at DESC LIMIT 5`).all(uid, now);

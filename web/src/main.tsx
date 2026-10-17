@@ -20,6 +20,7 @@ import TryDemo from "./pages/TryDemo";
 import CareCircle from "./pages/CareCircle";
 import SupportingList, { SupportingDetail } from "./pages/Supporting";
 import Join from "./pages/Join";
+import ClinicianView from "./pages/ClinicianView";
 
 function Protected() {
   const { user, loading } = useApp();
@@ -37,6 +38,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/register" element={<Auth mode="register" />} />
           <Route path="/try" element={<TryDemo />} />
           <Route path="/join/:token" element={<Join />} />
+          <Route path="/c/:token" element={<ClinicianView />} />
           <Route path="/app" element={<Protected />}>
             <Route index element={<Dashboard />} />
             <Route path="appointments" element={<Appointments />} />

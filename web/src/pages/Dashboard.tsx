@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, fmtDateTime, type DashboardData } from "../lib/api";
 import { useApp } from "../lib/app-context";
-import { PrepBadge, Skeletons } from "../components/ui";
+import { PlanBadge, PrepBadge, Skeletons } from "../components/ui";
 import { Assistant } from "../components/Assistant";
 import { CircleCard } from "../components/CircleBits";
 
@@ -21,6 +21,7 @@ function ApptList({ items, empty }: { items: Appt[]; empty: React.ReactNode }) {
               <div className="item-title">{a.practitioner_name}</div>
               <div className="item-sub">{a.service_type} · {a.clinic_name} · {d.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" })}</div>
             </div>
+            <PlanBadge count={a.pending_plans} />
             <PrepBadge status={a.prep_status} />
           </Link>
         );

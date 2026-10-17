@@ -33,13 +33,13 @@ export type PrepStatus = "none" | "notes" | "draft" | "confirmed";
 export interface Appointment {
   id: string; starts_at: string; practitioner_name: string; service_type: string; clinic_name: string;
   location: string | null; purpose: string | null; prep_status: PrepStatus;
-  open_tasks: number; done_tasks: number; instruction_count: number;
+  open_tasks: number; done_tasks: number; instruction_count: number; pending_plans: number;
 }
 export interface Page<T> { items: T[]; total: number; page: number; pageSize: number }
 export interface DashboardData {
   counts: { upcoming: number; past: number; prepared: number; open_tasks: number; done_tasks: number };
-  upcoming: Pick<Appointment, "id" | "starts_at" | "practitioner_name" | "service_type" | "clinic_name" | "prep_status">[];
-  recent: Pick<Appointment, "id" | "starts_at" | "practitioner_name" | "service_type" | "clinic_name" | "prep_status">[];
+  upcoming: Pick<Appointment, "id" | "starts_at" | "practitioner_name" | "service_type" | "clinic_name" | "prep_status" | "pending_plans">[];
+  recent: Pick<Appointment, "id" | "starts_at" | "practitioner_name" | "service_type" | "clinic_name" | "prep_status" | "pending_plans">[];
   openTasks: { id: string; title: string; status: string; deadline: string | null; needs_clarification: number; appointment_id: string; practitioner_name: string }[];
   doneTasks: { id: string; title: string; appointment_id: string; updated_at: string }[];
 }

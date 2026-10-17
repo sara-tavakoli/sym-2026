@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, ApiError, type ProposedTask, type Task } from "../lib/api";
 import { useApp } from "../lib/app-context";
 import { Spinner } from "./ui";
 import { TaskCard } from "./TaskCard";
 
-export function FollowUpPanel({ appointmentId, onChanged }: { appointmentId: string; onChanged?: () => void }) {
+/** `prefill` (e.g. a plan sent by a clinician) replaces the instructions text whenever its key changes; `onConfirmed` runs after tasks are saved. */
+export function FollowUpPanel({ appointmentId, onChanged, prefill, onConfirmed }:
+  { appointmentId: string; onChanged?: () => void; prefill?: { text: string; key: number }; onConfirmed?: () => void }) {
   const { notify } = useApp();
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [text, setText] = useState("");
@@ -12,6 +14,13 @@ export function FollowUpPanel({ appointmentId, onChanged }: { appointmentId: str
   const [busy, setBusy] = useState<"" | "extract" | "confirm">("");
   const [error, setError] = useState("");
   const [manual, setManual] = useState("");
+  const textRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (!prefill) return;
+    setText(prefill.text); setProposed(null); setError("");
+    requestAnimationFrame(() => { textRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); textRef.current?.focus(); });
+  }, [prefill?.key]);
 
   useEffect(() => {
     api.get<{ tasks: Task[] }>(`/appointments/${appointmentId}/follow-up`).then((r) => setTasks(r.tasks)).catch((e) => setError(e.message));
@@ -29,7 +38,7 @@ export function FollowUpPanel({ appointmentId, onChanged }: { appointmentId: str
     setError(""); setBusy("confirm");
     try {
       const r = await api.post<{ tasks: Task[] }>(`/appointments/${appointmentId}/instructions/confirm`, { text, tasks: proposed });
-      setTasks((t) => [...(t ?? []), ...r.tasks]); setProposed(null); setText(""); onChanged?.();
+      setTasks((t) => [...(t ?? []), ...r.tasks]); setProposed(null); setText(""); onChanged?.(); onConfirmed?.();
       notify(`${r.tasks.length} task${r.tasks.length > 1 ? "s" : ""} saved`);
     } catch (e) { fail(e); } finally { setBusy(""); }
   }
@@ -49,7 +58,7 @@ export function FollowUpPanel({ appointmentId, onChanged }: { appointmentId: str
         <div>
           <div className="field">
             <label htmlFor={`instr-${appointmentId}`}>Instructions from your healthcare professional</label>
-            <textarea id={`instr-${appointmentId}`} rows={5} maxLength={6000} value={text} onChange={(e) => setText(e.target.value)}
+            <textarea ref={textRef} id={`instr-${appointmentId}`} rows={5} maxLength={6000} value={text} onChange={(e) => setText(e.target.value)}
               placeholder="Paste or type what you were told, e.g. “Book a follow-up in 2 weeks. Get a blood test at …”" />
             <div className="hint">CarePath only lists actions that are written here. It won't add advice or change medication wording.</div>
           </div>

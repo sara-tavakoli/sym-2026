@@ -39,6 +39,11 @@ export function PrepBadge({ status }: { status: PrepStatus }) {
   return <span className="badge">Not prepared</span>;
 }
 
+/** Small marker for an after-visit plan a clinician sent back that the patient hasn't turned into a checklist yet. */
+export function PlanBadge({ count }: { count?: number }) {
+  return count ? <span className="badge info">{count === 1 ? "New plan from clinician" : `${count} new plans from clinician`}</span> : null;
+}
+
 export function Disclaimer({ compact = false }: { compact?: boolean }) {
   return (
     <div className="disclaimer" role="note">

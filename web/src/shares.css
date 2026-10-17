@@ -1,0 +1,75 @@
+/* ---------- Clinician share loop (patient card, clinician page, after-visit plans) ---------- */
+
+/* Patient: share card */
+.share-create { align-items: flex-end; }
+.share-create select { width: auto; min-width: 140px; }
+.share-link { margin-top: 1rem; padding: .9rem 1rem; border-radius: 12px; background: var(--primary-soft); border: 1px solid var(--border); }
+.share-link-row { display: flex; gap: .5rem; }
+.share-link-row input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85rem; background: var(--surface); }
+.share-list, .share-qs { margin-top: 1.25rem; }
+.share-list h3, .share-qs h3 { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.share-list .item:first-of-type { border-top: 1px solid var(--border); }
+.share-qs ul { list-style: none; padding: 0; margin: 0 0 .5rem; }
+.share-qs li { display: flex; gap: .6rem; align-items: flex-start; padding: .3rem 0; }
+.share-qs li.done { color: var(--muted); }
+.share-tick { width: 20px; height: 20px; flex: none; border-radius: 6px; border: 1.5px solid var(--border); display: grid; place-items: center; font-size: .75rem; font-weight: 800; margin-top: 2px; }
+.share-qs li.done .share-tick { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
+@media (max-width: 600px) { .share-link-row { flex-direction: column; } .share-create > * { width: 100%; } .share-create select { width: 100%; } }
+
+/* Patient: plans from a clinician */
+.plan { border: 1px solid var(--accent); background: var(--accent-soft); border-radius: 12px; padding: 1rem; }
+.plan h3 { color: var(--text); }
+.plan-text { margin: 0 0 .75rem; padding: .7rem .9rem; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); white-space: pre-wrap; overflow-wrap: anywhere; font-size: .95rem; }
+.plan-history summary { cursor: pointer; color: var(--muted); font-size: .9rem; font-weight: 600; padding: .25rem 0; }
+.plan-old { margin-top: .6rem; }
+.plan-old .plan-text { margin: .25rem 0 0; background: var(--surface-2); }
+
+/* Clinician page: standalone, no app shell */
+.cv-page { min-height: 100vh; background: var(--bg); padding-bottom: 3rem; }
+.cv-wrap { width: 100%; max-width: 820px; margin: 0 auto; padding: 0 16px; }
+main.cv-wrap { padding-top: 1.25rem; }
+.cv-top { background: var(--surface); border-bottom: 1px solid var(--border); }
+.cv-top-row { display: flex; justify-content: space-between; align-items: center; min-height: 56px; }
+.cv-banner { border-left: 4px solid var(--warn); background: var(--warn-soft); color: var(--text); border-radius: 10px; padding: .7rem 1rem; font-size: .92rem; }
+.cv-sheet { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: clamp(1.1rem, 4vw, 2rem); box-shadow: var(--shadow); }
+.cv-head { border-bottom: 2px solid var(--primary); padding-bottom: 1rem; margin-bottom: .5rem; }
+.cv-kicker { font-size: .75rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--primary); margin: 0 0 .2rem; }
+.cv-head h1 { margin: 0 0 .75rem; }
+.cv-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .5rem 1.25rem; margin: 0; }
+.cv-meta dt { color: var(--muted); font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.cv-meta dd { margin: .05rem 0 0; font-weight: 600; }
+.cv-tools { padding: .5rem 0; }
+.cv-section h2 { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; flex-wrap: wrap; font-size: .95rem; text-transform: uppercase; letter-spacing: .05em; color: var(--primary); border-bottom: 1px solid var(--border); padding-bottom: .25rem; margin: 1.25rem 0 .5rem; }
+.cv-count { font-size: .78rem; text-transform: none; letter-spacing: 0; color: var(--muted); font-weight: 600; }
+.cv-points { list-style: none; margin: 0; padding: 0; }
+.cv-point { display: flex; gap: .5rem; align-items: flex-start; padding: .4rem 0; }
+.cv-point + .cv-point { border-top: 1px dashed var(--border); }
+.cv-n { flex: none; min-width: 1.4rem; color: var(--muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+.cv-check { width: 22px; height: 22px; min-height: 22px; flex: none; margin: .1rem 0 0; accent-color: var(--primary); cursor: pointer; }
+.cv-body { flex: 1; min-width: 0; }
+.cv-text { display: inline; font-weight: 500; font-size: 1rem; margin: 0 .5rem 0 0; overflow-wrap: anywhere; }
+label.cv-text { cursor: pointer; }
+.cv-point.addressed .cv-text { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--border); }
+.cv-done { margin-left: .5rem; text-decoration: none; vertical-align: 1px; }
+.cv-src { font: inherit; font-size: .78rem; color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 6px; padding: .1rem .5rem; cursor: pointer; white-space: nowrap; vertical-align: 1px; }
+.cv-src:hover { text-decoration: underline; }
+.cv-src.static { color: var(--muted); background: var(--surface-2); cursor: default; }
+.cv-quote { display: none; margin: .35rem 0 .1rem; padding: .35rem .7rem; border-left: 3px solid var(--accent); background: var(--surface-2); border-radius: 0 8px 8px 0; font-size: .87rem; color: var(--muted); }
+.cv-quote.open { display: block; }
+.cv-quote q { font-style: italic; color: var(--text); }
+.cv-foot { margin-top: 1.5rem; padding-top: .6rem; border-top: 1px solid var(--border); font-size: .75rem; color: var(--muted); }
+.cv-plan h2 { margin-bottom: .4rem; }
+.cv-sent { background: var(--ok-soft); color: var(--ok); border-radius: 10px; padding: .8rem 1rem; }
+.cv-sent strong { color: var(--ok); }
+.cv-history { margin-top: 1.25rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+.cv-gone { margin-top: 3rem; } .cv-gone h1 { font-size: 1.4rem; color: var(--text); margin-top: .75rem; }
+@media print {
+  .cv-page { background: #fff; padding: 0; } main.cv-wrap { padding: 0; max-width: none; }
+  .cv-sheet { border: 0; box-shadow: none; padding: 0; background: #fff; color: #111; }
+  .cv-banner { background: #fff; color: #111; border: 1px solid #999; border-left-width: 4px; }
+  .cv-quote { display: block; background: none; color: #444; padding: 0 0 0 .6rem; }
+  .cv-quote q, .cv-text { color: #111; }
+  .cv-section h2, .cv-kicker { color: #0f766e; }
+}
+.plans { margin-bottom: 1rem; }
+.cv-head > .row { margin-bottom: .6rem; }

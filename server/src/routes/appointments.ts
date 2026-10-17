@@ -27,7 +27,8 @@ const SELECT = `
              'none') AS prep_status,
     (SELECT COUNT(*) FROM follow_up_tasks t WHERE t.appointment_id = a.id AND t.status != 'completed') AS open_tasks,
     (SELECT COUNT(*) FROM follow_up_tasks t WHERE t.appointment_id = a.id AND t.status = 'completed') AS done_tasks,
-    (SELECT COUNT(*) FROM visit_instructions i WHERE i.appointment_id = a.id) AS instruction_count
+    (SELECT COUNT(*) FROM visit_instructions i WHERE i.appointment_id = a.id) AS instruction_count,
+    (SELECT COUNT(*) FROM clinician_plans cp WHERE cp.appointment_id = a.id AND cp.imported_at IS NULL) AS pending_plans
   FROM appointments a`;
 
 const listQuery = z.object({
