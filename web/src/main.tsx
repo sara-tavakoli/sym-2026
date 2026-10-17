@@ -26,6 +26,7 @@ import ClinicianView from "./pages/ClinicianView";
 import FitFinder from "./pages/FitFinder";
 import DraftBrief from "./pages/DraftBrief";
 import Compare from "./pages/Compare";
+import FindCare from "./pages/FindCare";
 
 function Protected() {
   const { user, loading } = useApp();
@@ -42,6 +43,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/login" element={<Auth mode="login" />} />
           <Route path="/register" element={<Auth mode="register" />} />
           <Route path="/try" element={<TryDemo />} />
+          <Route path="/find-care" element={<FindCare publicPage />} />
           <Route path="/join/:token" element={<Join />} />
           <Route path="/c/:token" element={<ClinicianView />} />
           <Route path="/app" element={<Protected />}>
@@ -53,6 +55,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="assistant" element={<AssistantPage />} />
             <Route path="preparation" element={<PrepList />} />
             <Route path="drafts/:id" element={<DraftBrief />} />
+            <Route path="find-care" element={<FindCare />} />
             <Route path="fit-finder" element={<FitFinder />} />
             <Route path="fit-finder/compare" element={<Compare />} />
             <Route path="follow-up" element={<FollowUp />} />
