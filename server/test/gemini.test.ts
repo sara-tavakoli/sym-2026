@@ -73,7 +73,8 @@ test("Gemini task output keeps medication verbatim and rejects invented tasks", 
     { title: "Drink more water", source_text: "Drink more water", deadline: null, needs_clarification: false, clarification_reason: null },
   ] })]);
   setAiClient(createGeminiClient(f.models));
-  const tasks = await extractTasks(text);
+  const { tasks, source } = await extractTasks(text);
+  assert.equal(source, "ai");
   assert.equal(tasks.length, 2);
   assert.equal(tasks[1].title, "Take ibuprofen 400mg as discussed");
   assert.equal(tasks[1].needs_clarification, true);
@@ -139,7 +140,7 @@ before(async () => {
 });
 after(() => server.close());
 
-test("non-AI features work and AI routes return a clear 503 when no key is set", async () => {
+test("without a key, briefs and tasks fall back to rules-based organising; other AI routes return a clear 503", async () => {
   let cookie = "";
   const call = async (method: string, path: string, body?: unknown) => {
     const r = await fetch(base + path, { method, headers: { "content-type": "application/json", cookie }, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -154,8 +155,12 @@ test("non-AI features work and AI routes return a clear 503 when no key is set",
   assert.equal((await call("POST", `/api/appointments/${id}/tasks`, { title: "Bring Medicare card" })).status, 201);
   assert.equal((await call("GET", "/api/dashboard")).data.counts.open_tasks, 1);
   const gen = await call("POST", `/api/appointments/${id}/brief/generate`);
-  assert.equal(gen.status, 503);
-  assert.match(gen.data.error, /not configured/);
-  assert.equal((await call("POST", `/api/appointments/${id}/instructions/extract`, { text: "Book a review." })).status, 503);
+  assert.equal(gen.status, 200);
+  assert.equal(gen.data.source, "rules");
+  assert.equal(gen.data.brief.sections.reason.length, 1);
+  const ex = await call("POST", `/api/appointments/${id}/instructions/extract`, { text: "Book a review." });
+  assert.equal(ex.status, 200);
+  assert.deepEqual([ex.data.source, ex.data.tasks.length], ["rules", 1]);
+  assert.equal((await call("POST", "/api/assistant/chat", { messages: [{ role: "user", content: "Hello" }] })).status, 503);
   assert.deepEqual((await call("GET", "/api/ai/info")).data, { provider: "google-gemini", model: "gemini-3.8-flash", configured: false });
 });

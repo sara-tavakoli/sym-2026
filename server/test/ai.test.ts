@@ -173,12 +173,13 @@ test("regenerating one section keeps the others", async () => {
   assert.equal((await c.call("POST", `/api/appointments/${id}/brief/sections/bogus/regenerate`)).status, 400);
 });
 
-test("AI failures surface as clean errors", async () => {
+test("an unavailable provider falls back to rules; unusable output still surfaces as an error", async () => {
   setAiClient({ async json() { throw new AiError("The AI service is not reachable. Please try again.", 503); } });
   const { c, id } = await user("fail@example.com");
   await c.call("PUT", `/api/appointments/${id}/prep-notes`, input);
   const r = await c.call("POST", `/api/appointments/${id}/brief/generate`);
-  assert.equal(r.status, 503);
+  assert.equal(r.status, 200);
+  assert.equal(r.data.source, "rules");
   setAiClient({ async json() { return { nonsense: true }; } });
   assert.equal((await c.call("POST", `/api/appointments/${id}/brief/generate`)).status, 502);
 });

@@ -81,7 +81,7 @@ draftsRouter.post("/from-chat", aiLimiter, async (req, res) => {
     const id = newId();
     db.prepare("INSERT INTO draft_briefs (id, user_id, title, origin, notes_json, content_json) VALUES (?,?,?,?,?,?)").run(
       id, req.user!.id, titleFrom(notes), "chat", JSON.stringify(notes), JSON.stringify({ sections: fromGenerated(draft), dropped: draft.dropped } satisfies DraftContent));
-    res.status(201).json(view(db.prepare("SELECT * FROM draft_briefs WHERE id = ?").get(id) as unknown as DraftRow));
+    res.status(201).json({ ...view(db.prepare("SELECT * FROM draft_briefs WHERE id = ?").get(id) as unknown as DraftRow), source: draft.source });
   } catch (e) { aiFail(res, e); }
 });
 
@@ -116,7 +116,7 @@ async function generate(req: Request, res: Response, only?: Section) {
     const sections = fromGenerated(draft, existing?.sections, only);
     const title = row.title === "Draft appointment brief" ? titleFrom(notes) : undefined;
     save(row.id, req.user!.id, { title, content: { sections, dropped: (only ? existing?.dropped ?? 0 : 0) + draft.dropped } });
-    res.json(view(load(req)!));
+    res.json({ ...view(load(req)!), source: draft.source });
   } catch (e) { aiFail(res, e); }
 }
 draftsRouter.post("/:id/generate", aiLimiter, (req, res) => generate(req, res));

@@ -49,7 +49,7 @@ for (const c of briefCases) {
   } catch (e) { check(`[brief] ${c.name}: ran`, false, (e as Error).message); }
 }
 
-const taskCases: { name: string; text: string; expect: (t: Awaited<ReturnType<typeof extractTasks>>) => [string, boolean][] }[] = [
+const taskCases: { name: string; text: string; expect: (t: Awaited<ReturnType<typeof extractTasks>>["tasks"]) => [string, boolean][] }[] = [
   {
     name: "clear instructions",
     text: "Please book a follow-up appointment in 2 weeks. Get a blood test at Pathology Plus before then. Bring your test results to the next visit.",
@@ -80,7 +80,7 @@ const taskCases: { name: string; text: string; expect: (t: Awaited<ReturnType<ty
 for (const c of taskCases) {
   const t0 = Date.now();
   try {
-    const r = await extractTasks(c.text);
+    const r = (await extractTasks(c.text)).tasks;
     check(`[tasks] ${c.name}: every source is verbatim`, r.every((x) => c.text.toLowerCase().replace(/\s+/g, " ").includes(x.source_text.toLowerCase().replace(/\s+/g, " "))));
     for (const [n, ok] of c.expect(r)) check(`[tasks] ${c.name}: ${n}`, ok, JSON.stringify(r));
     console.log(`      (${((Date.now() - t0) / 1000).toFixed(1)}s, ${r.length} tasks)`);

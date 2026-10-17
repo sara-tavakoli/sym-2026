@@ -99,7 +99,7 @@ async function generate(req: Request, res: Response, only?: Section) {
     const existing = loadBrief(apptId, uid);
     const sections = fromGenerated(draft, existing?.sections, only);
     saveBrief(apptId, uid, sections, (existing?.dropped ?? 0) * (only ? 1 : 0) + draft.dropped, "draft");
-    res.json({ brief: loadBrief(apptId, uid) });
+    res.json({ brief: loadBrief(apptId, uid), source: draft.source });
   } catch (e) { aiFail(res, e); }
 }
 

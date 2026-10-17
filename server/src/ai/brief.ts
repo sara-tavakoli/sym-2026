@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { generate } from "./client.js";
+import { generate, withRulesFallback } from "./client.js";
+import { fallbackBrief } from "./fallback.js";
 import { injectionSentences, overlapsInjection } from "./safety.js";
 
 export const FIELDS = ["main_concern", "onset", "background", "experiences", "questions", "additional"] as const;
@@ -51,7 +52,7 @@ export const quoteInField = (quote: string, fieldText: string) => norm(fieldText
 const CLINICAL = /\b(diagnos\w*|prescri\w*|treat\w*|medicat\w*|dosage|likely|probably|suggests?|indicat\w*|caused? by|due to)\b/i;
 
 export interface GeneratedPoint { text: string; field: Field; quote: string }
-export interface BriefDraft { sections: Record<Section, GeneratedPoint[]>; dropped: number }
+export interface BriefDraft { sections: Record<Section, GeneratedPoint[]>; dropped: number; source?: "ai" | "rules" }
 
 /** Keeps only points that are traceable to the patient's input; everything else is dropped and counted. */
 export function verifyBrief(raw: z.infer<typeof output>, input: PrepInput): BriefDraft {
@@ -76,6 +77,6 @@ export function verifyBrief(raw: z.infer<typeof output>, input: PrepInput): Brie
 }
 
 export async function generateBrief(input: PrepInput): Promise<BriefDraft> {
-  const raw = await generate({ system: SYSTEM, user: buildUserPrompt(input), schema: SCHEMA }, output);
-  return verifyBrief(raw, input);
+  const { value, source } = await withRulesFallback(() => generate({ system: SYSTEM, user: buildUserPrompt(input), schema: SCHEMA }, output), () => fallbackBrief(input));
+  return { ...verifyBrief(value, input), source };
 }

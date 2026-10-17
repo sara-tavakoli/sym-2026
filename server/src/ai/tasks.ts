@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { generate } from "./client.js";
+import { generate, withRulesFallback } from "./client.js";
+import { fallbackTasks } from "./fallback.js";
 import { injectionSentences, isExplicitDeadline, overlapsInjection } from "./safety.js";
 
 const item = z.object({
@@ -79,7 +80,7 @@ export function verifyTasks(raw: z.infer<typeof output>, text: string): Proposed
   return out;
 }
 
-export async function extractTasks(text: string): Promise<ProposedTask[]> {
-  const raw = await generate({ system: SYSTEM, user: `<instructions>\n${text.trim()}\n</instructions>`, schema: SCHEMA }, output);
-  return verifyTasks(raw, text);
+export async function extractTasks(text: string): Promise<{ tasks: ProposedTask[]; source: "ai" | "rules" }> {
+  const { value, source } = await withRulesFallback(() => generate({ system: SYSTEM, user: `<instructions>\n${text.trim()}\n</instructions>`, schema: SCHEMA }, output), () => fallbackTasks(text));
+  return { tasks: verifyTasks(value, text), source };
 }

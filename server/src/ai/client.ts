@@ -150,6 +150,19 @@ function getDefaultClient(): AiClient {
 
 let override: AiClient | null = null;
 export const setAiClient = (c: AiClient | null) => { override = c; };
+export const aiConfigured = () => !!override || providers().length > 0;
+
+/**
+ * Runs an AI call, or the deterministic fallback when no provider is configured or the provider is
+ * temporarily unavailable (busy, unreachable, timed out). Unusable output and refusals still surface.
+ */
+export async function withRulesFallback<T>(ai: () => Promise<T>, rules: () => T): Promise<{ value: T; source: "ai" | "rules" }> {
+  if (!aiConfigured()) return { value: rules(), source: "rules" };
+  try { return { value: await ai(), source: "ai" }; } catch (e) {
+    if (e instanceof AiError && [429, 503, 504].includes(e.status)) return { value: rules(), source: "rules" };
+    throw e;
+  }
+}
 export const aiInfo = () => {
   const list = providers();
   return {

@@ -32,7 +32,7 @@ instructionsRouter.post("/instructions/extract", aiLimiter, async (req, res) => 
   const { text } = z.object({ text: instructionText }).parse(req.body);
   try {
     // Nothing is stored here: the raw text is only saved if the user confirms the reviewed tasks.
-    res.json({ tasks: await extractTasks(text) });
+    res.json(await extractTasks(text)); // { tasks, source: "ai" | "rules" }
   } catch (e) {
     if (e instanceof AiError) return res.status(e.status).json({ error: e.message });
     throw e;
