@@ -29,7 +29,7 @@ export function seedDemo(uid: string, lockedHash: string) {
                            VALUES (?,?,?,?,?,?,?,?)`);
   const gp = newId(), past = newId(), dental = newId();
   appt.run(gp, uid, at(2, 10, 15), "Dr Priya Lee", "General Practitioner (GP)", "Harbourside Family Practice (fictional)", "12 Example St, Sydney NSW 2000", "Headaches and feeling tired");
-  appt.run(past, uid, at(-5, 14, 30), "Dr Priya Lee", "General Practitioner (GP)", "Harbourside Family Practice (fictional)", "12 Example St, Sydney NSW 2000", "Dizziness when standing up");
+  appt.run(past, uid, at(-9, 14, 30), "Dr Priya Lee", "General Practitioner (GP)", "Harbourside Family Practice (fictional)", "12 Example St, Sydney NSW 2000", "Dizziness when standing up");
   appt.run(dental, uid, at(1, 16, 0), "Dr Tom Nguyen", "Dentist", "Smile Bright Dental (fictional)", "88 Sample Rd, Newtown NSW 2042", "Check-up and clean");
 
   const notes = {
@@ -63,14 +63,14 @@ export function seedDemo(uid: string, lockedHash: string) {
   };
   saveBrief(gp, uid, sections, 0, "confirmed");
 
-  const text = "Blood test (FBC and iron studies) this week at any pathology collection centre.\nBook a review appointment with me in 2 weeks to go through results.\nTake iron supplement 1 tablet daily with food.\nStand up slowly and drink more water.\nCall the clinic soon if the dizziness gets worse.";
+  const text = "Blood test (FBC and iron studies) within 5 days at any pathology collection centre.\nBook a review appointment with me in 2 weeks to go through results.\nTake iron supplement 1 tablet daily with food.\nStand up slowly and drink more water.\nCall the clinic soon if the dizziness gets worse.";
   const instr = newId();
   db.prepare("INSERT INTO visit_instructions (id, user_id, appointment_id, raw_text) VALUES (?,?,?,?)").run(instr, uid, past, text);
   const task = db.prepare(`INSERT INTO follow_up_tasks (id, user_id, appointment_id, instruction_id, title, source_text, deadline, status, needs_clarification, clarification_reason)
                            VALUES (?,?,?,?,?,?,?,?,?,?)`);
   const med = "Medication wording is shown exactly as entered. Confirm any details with your healthcare professional or pharmacist.";
   const blood = newId(), review = newId();
-  task.run(blood, uid, past, instr, "Get blood test (FBC and iron studies)", "Blood test (FBC and iron studies) this week at any pathology collection centre.", "this week", "todo", 0, null);
+  task.run(blood, uid, past, instr, "Get blood test (FBC and iron studies)", "Blood test (FBC and iron studies) within 5 days at any pathology collection centre.", "within 5 days", "todo", 0, null);
   task.run(review, uid, past, instr, "Book a review appointment", "Book a review appointment with me in 2 weeks to go through results.", "in 2 weeks", "completed", 0, null);
   task.run(newId(), uid, past, instr, "Take iron supplement 1 tablet daily with food.", "Take iron supplement 1 tablet daily with food.", null, "in_progress", 1, med);
   task.run(newId(), uid, past, instr, "Stand up slowly and drink more water", "Stand up slowly and drink more water.", null, "todo", 0, null);
