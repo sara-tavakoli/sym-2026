@@ -93,3 +93,7 @@ CREATE TABLE IF NOT EXISTS follow_up_tasks (
 CREATE INDEX IF NOT EXISTS idx_tasks_user_status ON follow_up_tasks(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_tasks_appt ON follow_up_tasks(appointment_id);
 `);
+
+// Lightweight forward migration for databases created before this column existed.
+const taskCols = db.prepare("PRAGMA table_info(follow_up_tasks)").all() as { name: string }[];
+if (!taskCols.some((c) => c.name === "clarification_reason")) db.exec("ALTER TABLE follow_up_tasks ADD COLUMN clarification_reason TEXT");

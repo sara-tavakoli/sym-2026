@@ -8,6 +8,9 @@ import "./db.js";
 import { authRouter } from "./routes/auth.js";
 import { appointmentsRouter } from "./routes/appointments.js";
 import { dashboardRouter } from "./routes/dashboard.js";
+import { prepRouter } from "./routes/prep.js";
+import { instructionsRouter, tasksRouter } from "./routes/tasks.js";
+import { aiInfo } from "./ai/client.js";
 
 export function createApp() {
   const app = express();
@@ -18,7 +21,11 @@ export function createApp() {
 
   app.get("/api/health", (_req, res) => res.json({ ok: true }));
   app.use("/api/auth", authRouter);
+  app.get("/api/ai/info", (_req, res) => res.json(aiInfo()));
+  app.use("/api/appointments/:id", prepRouter);
+  app.use("/api/appointments/:id", instructionsRouter);
   app.use("/api/appointments", appointmentsRouter);
+  app.use("/api/tasks", tasksRouter);
   app.use("/api/dashboard", dashboardRouter);
   app.use("/api", (_req, res) => res.status(404).json({ error: "Not found" }));
 
