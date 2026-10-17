@@ -77,3 +77,10 @@ export interface ProposedTask {
   title: string; source_text: string; deadline: string | null; needs_clarification: boolean; clarification_reason: string | null; is_medication: boolean; notes?: string;
 }
 export const STATUS_LABELS: Record<TaskStatus, string> = { todo: "To do", in_progress: "In progress", completed: "Completed" };
+
+export interface AssistantAction { label: string; href: string; kind: "internal" | "external" | "phone" }
+export interface ChatMessage {
+  role: "user" | "assistant"; content: string;
+  actions?: AssistantAction[]; safety?: "emergency" | "filtered" | null;
+}
+export interface AssistantReply { reply: string; intent: string; safety: "emergency" | "filtered" | null; actions: AssistantAction[] }

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api, fmtDateTime, type DashboardData } from "../lib/api";
 import { useApp } from "../lib/app-context";
 import { PrepBadge, Skeletons } from "../components/ui";
+import { Assistant } from "../components/Assistant";
 
 type Appt = DashboardData["upcoming"][number];
 
@@ -44,6 +45,8 @@ export default function Dashboard() {
           <Link className="btn" to="/app/follow-up">Add visit notes</Link>
         </div>
       </div>
+
+      <Assistant variant="panel" />
 
       {error && <div className="alert error" role="alert">{error}</div>}
       {!data && !error && <Skeletons rows={4} />}

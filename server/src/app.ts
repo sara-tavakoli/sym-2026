@@ -11,6 +11,7 @@ import { dashboardRouter } from "./routes/dashboard.js";
 import { prepRouter } from "./routes/prep.js";
 import { instructionsRouter, tasksRouter } from "./routes/tasks.js";
 import { aiInfo } from "./ai/client.js";
+import { assistantRouter } from "./routes/assistant.js";
 
 export function createApp() {
   const app = express();
@@ -26,6 +27,7 @@ export function createApp() {
   app.use("/api/appointments/:id", instructionsRouter);
   app.use("/api/appointments", appointmentsRouter);
   app.use("/api/tasks", tasksRouter);
+  app.use("/api/assistant", assistantRouter);
   app.use("/api/dashboard", dashboardRouter);
   app.use("/api", (_req, res) => res.status(404).json({ error: "Not found" }));
 

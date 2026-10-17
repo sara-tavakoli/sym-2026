@@ -18,6 +18,7 @@ npm run typecheck
 npm run seed       # fictional demo account: demo@carepath.example / demo-password-1
 npm run eval       # real-model safety eval on synthetic cases (needs GEMINI_API_KEY; ~9 billable requests)
 npm run ui-smoke   # Edge/Playwright UI checks, desktop + mobile, light + dark (server must be running + seeded)
+npm run ui-assistant # dashboard AI Assistant in the browser with real AI (~5 Gemini calls; needs GEMINI_API_KEY)
 npm run ui-journey # full MVP journey through the UI with real AI on a fresh account (needs GEMINI_API_KEY)
 ```
 Dev mode: `npm run dev:server` and `npm run dev:web` (Vite on :5173 proxies `/api`). Config: see `.env.example`.
@@ -29,6 +30,7 @@ Dev mode: `npm run dev:server` and `npm run dev:web` (Vite on :5173 proxies `/ap
 - **Auth:** scrypt password hashes; random session tokens in an httpOnly cookie, only the SHA-256 of the token is stored. Sessions live in the DB, so API instances are stateless.
 - **Authorisation:** every query filters on `user_id`; other users' records return 404.
 - **AI:** Google Gemini (`@google/genai`, default model `gemini-3.8-flash`, override with `GEMINI_MODEL`) using JSON-schema structured output. Output is validated with zod, then checked server-side: brief points must quote the patient's own words, task sources must be verbatim, medication wording is preserved and flagged, prompt-injection text is ignored. Timeout, per-user rate limit and a bounded queue protect the service.
+- **AI Assistant:** stateless chat (`POST /api/assistant/chat`); the conversation lives in browser memory only and is never stored. Gemini returns `{reply, intent}`; action buttons are chosen by the server from a fixed list and the user's own appointments. Emergency/self-harm messages get fixed 000/Lifeline wording without calling the model; replies containing diagnostic or dosing language are replaced. Separate hourly limit (`AI_CHAT_RATE_LIMIT_PER_HOUR`, default 60).
 
 ## Scalability: implemented vs proposed
 Implemented: server-side persistence, per-user data isolation, composite indexes, pagination (appointments, tasks), stateless request handling, per-user AI rate limit, AI request timeout, bounded AI queue, auth rate limiting.
