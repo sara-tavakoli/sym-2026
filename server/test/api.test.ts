@@ -106,3 +106,11 @@ test("deleting an account removes its data", async () => {
   assert.equal((await c.call("DELETE", "/api/auth/account")).status, 200);
   assert.equal((await new Client().call("POST", "/api/auth/login", { email: "gone@example.com", password: "password123" })).status, 401);
 });
+
+test("session check answers 200 for signed-out visitors and returns the user when signed in", async () => {
+  const anon = await new Client().call("GET", "/api/auth/session");
+  assert.equal(anon.status, 200);
+  assert.equal(anon.data.user, null);
+  const c = await signup("session@example.com");
+  assert.equal((await c.call("GET", "/api/auth/session")).data.user.email, "session@example.com");
+});

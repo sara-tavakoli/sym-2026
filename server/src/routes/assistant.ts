@@ -41,7 +41,7 @@ function actionsFor(intent: Intent, selfHarm: boolean, appts: { id: string; prac
     case "find_provider":
       return [{ label: "Open Fit Finder", href: "/app/fit-finder", kind: "internal" }, { label: "Healthdirect: Find a health service", href: HEALTHDIRECT_SERVICES, kind: "external" }];
     case "follow_up":
-      return [{ label: "Open Follow-Up Tracker", href: "/app/follow-up", kind: "internal" }];
+      return [{ label: "Open Follow-up tracker", href: "/app/follow-up", kind: "internal" }];
     default:
       return [];
   }

@@ -32,7 +32,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [chat, setChat] = useState<ChatMessage[]>([]);
 
   useEffect(() => {
-    api.get<{ user: User }>("/auth/me").then((r) => setUser(r.user)).catch((e) => { if (!(e instanceof ApiError) || e.status !== 401) console.error(e); }).finally(() => setLoading(false));
+    api.get<{ user: User | null }>("/auth/session").then((r) => setUser(r.user)).catch((e) => console.error(e)).finally(() => setLoading(false));
   }, []);
 
   const setTheme = useCallback((t: Theme) => {

@@ -38,14 +38,18 @@ export function destroySession(token: string) {
 export interface AuthedUser { id: string; email: string; name: string }
 declare module "express-serve-static-core" { interface Request { user?: AuthedUser } }
 
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
+/** The signed-in user for this request, if any. */
+export function currentUser(req: Request): AuthedUser | undefined {
   const token = req.cookies?.[SESSION_COOKIE];
-  if (token) {
-    const row = db.prepare(
-      `SELECT u.id, u.email, u.name FROM sessions s JOIN users u ON u.id = s.user_id
-       WHERE s.token_hash = ? AND s.expires_at > ?`
-    ).get(sha(token), new Date().toISOString()) as AuthedUser | undefined;
-    if (row) { req.user = row; return next(); }
-  }
+  if (!token) return undefined;
+  return db.prepare(
+    `SELECT u.id, u.email, u.name FROM sessions s JOIN users u ON u.id = s.user_id
+     WHERE s.token_hash = ? AND s.expires_at > ?`
+  ).get(sha(token), new Date().toISOString()) as AuthedUser | undefined;
+}
+
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const row = currentUser(req);
+  if (row) { req.user = row; return next(); }
   res.status(401).json({ error: "Not signed in" });
 }

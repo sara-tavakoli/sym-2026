@@ -2,7 +2,7 @@ import { Router, type Response } from "express";
 import { z } from "zod";
 import rateLimit from "express-rate-limit";
 import { db } from "../db.js";
-import { SESSION_COOKIE, createSession, destroySession, hashPassword, newId, requireAuth, verifyPassword } from "../auth.js";
+import { SESSION_COOKIE, createSession, currentUser, destroySession, hashPassword, newId, requireAuth, verifyPassword } from "../auth.js";
 
 export const authRouter = Router();
 
@@ -55,6 +55,8 @@ authRouter.post("/logout", (req, res) => {
 });
 
 authRouter.get("/me", requireAuth, (req, res) => res.json({ user: req.user }));
+// Signed-out is a normal state for public pages, so this answers 200 with user: null instead of 401.
+authRouter.get("/session", (req, res) => res.json({ user: currentUser(req) ?? null }));
 
 // Settings: delete the account and everything it owns (data minimisation).
 authRouter.delete("/account", requireAuth, (req, res) => {

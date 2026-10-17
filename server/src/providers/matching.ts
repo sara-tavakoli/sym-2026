@@ -153,7 +153,7 @@ export function evaluate(p: ProviderRecord, prefs: Prefs, origin: Location | nul
   };
   const why = [
     `${p.category.name}${distance_km !== null ? `, ${distance_km} km from ${origin!.suburb}` : ""}.`,
-    summary.total ? `Meets ${summary.met} of ${summary.total} preferences${summary.partial ? `, partly meets ${summary.partial}` : ""}${summary.unverified ? `, ${summary.unverified} not verified` : ""}${summary.not_met ? `, ${summary.not_met} not met` : ""}.` : "Matches your chosen service.",
+    summary.total ? `Meets ${summary.met} of ${summary.total} ${summary.total === 1 ? "preference" : "preferences"}${summary.partial ? `, partly meets ${summary.partial}` : ""}${summary.unverified ? `, ${summary.unverified} not verified` : ""}${summary.not_met ? `, ${summary.not_met} not met` : ""}.` : "Matches your chosen service.",
   ].join(" ");
   return { provider: p, distance_km, checks, summary, why };
 }

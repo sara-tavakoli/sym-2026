@@ -15,7 +15,7 @@ export interface AttentionItem {
 }
 interface AttentionData { items: AttentionItem[]; today: string; counts: Record<Severity, number> }
 
-const KIND_LABEL: Record<Kind, string> = { overdue: "Overdue", due_soon: "Due soon", clarify: "Needs clarification", prepare: "Prepare now", add_instructions: "After your visit" };
+const KIND_LABEL: Record<Kind, string> = { overdue: "Overdue", due_soon: "Due soon", clarify: "Needs clarification", prepare: "Coming up", add_instructions: "After your visit" };
 const TONE: Record<Severity, string> = { high: "danger", medium: "warn", low: "info" };
 const COLLAPSED = 4;
 
