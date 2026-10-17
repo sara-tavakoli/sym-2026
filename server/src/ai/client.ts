@@ -1,4 +1,5 @@
 import { ApiError, GoogleGenAI } from "@google/genai";
+import Anthropic from "@anthropic-ai/sdk";
 import type { ZodType } from "zod";
 
 /**
@@ -14,6 +15,7 @@ export class AiError extends Error {
 }
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
 const TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS ?? 60_000);
 const MAX_CONCURRENT = Number(process.env.AI_MAX_CONCURRENT ?? 4);
 const MAX_QUEUE = Number(process.env.AI_MAX_QUEUE ?? 20);
@@ -61,18 +63,88 @@ export function createGeminiClient(models: GeminiModels, model = GEMINI_MODEL): 
   };
 }
 
-// The SDK client is created lazily so the app (and every non-AI feature) starts without a key.
+/** Structured outputs require every object to declare additionalProperties: false. */
+export function strictSchema(schema: unknown): unknown {
+  if (Array.isArray(schema)) return schema.map(strictSchema);
+  if (!schema || typeof schema !== "object") return schema;
+  const out = Object.fromEntries(Object.entries(schema).map(([k, v]) => [k, strictSchema(v)]));
+  if (out.type === "object" && !("additionalProperties" in out)) out.additionalProperties = false;
+  return out;
+}
+
+/** The subset of the Anthropic SDK we use; lets tests pass a fake without network access. */
+export interface ClaudeMessages {
+  create(params: Anthropic.Beta.MessageCreateParamsNonStreaming, options?: { signal?: AbortSignal }): PromiseLike<Anthropic.Beta.BetaMessage>;
+}
+
+export function createClaudeClient(messages: ClaudeMessages, model = CLAUDE_MODEL): AiClient {
+  return {
+    async json({ system, user, schema }, signal) {
+      let res: Anthropic.Beta.BetaMessage;
+      try {
+        res = await messages.create({
+          model, max_tokens: 16000, system,
+          messages: [{ role: "user", content: user }],
+          output_config: { effort: "low", format: { type: "json_schema", schema: strictSchema(schema) as Record<string, unknown> } },
+          betas: ["server-side-fallback-2026-07-01"], fallbacks: "default",
+        }, { signal });
+      } catch (e) {
+        if (signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
+        if (e instanceof Anthropic.RateLimitError) throw new AiError("The AI service is busy right now. Please try again in a minute.", 429);
+        if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) throw new AiError("The AI service is not configured correctly.", 503);
+        if (e instanceof Anthropic.NotFoundError) throw new AiError("The configured AI model is not available.", 503);
+        if (e instanceof Anthropic.APIConnectionError) throw new AiError("The AI service is not reachable. Please try again.", 503);
+        if (e instanceof Anthropic.APIError) throw new AiError("The AI service returned an error.", 502);
+        throw e;
+      }
+      if (res.stop_reason === "refusal") throw new AiError("The AI declined this request. Please rephrase and try again.", 422);
+      const text = res.content.find((b) => b.type === "text");
+      // Non-JSON output throws here and is retried once by generate().
+      return JSON.parse(text?.type === "text" ? text.text : "");
+    },
+  };
+}
+
+/** Tries each provider in order; a provider-side failure (not a timeout) falls through to the next one. */
+export function withFallback(clients: AiClient[]): AiClient {
+  return {
+    async json(req, signal) {
+      let last: unknown;
+      for (const c of clients) {
+        try { return await c.json(req, signal); } catch (e) {
+          if (!(e instanceof AiError) || e.status === 422) throw e;
+          last = e;
+        }
+      }
+      throw last;
+    },
+  };
+}
+
+// Providers are created lazily so the app (and every non-AI feature) starts without a key.
+// AI_PROVIDER picks which one goes first when both keys are set; the other becomes the fallback.
+const providers = () => {
+  const list: { name: string; model: string; make: () => AiClient }[] = [];
+  if (process.env.GEMINI_API_KEY) list.push({ name: "google-gemini", model: GEMINI_MODEL, make: () => createGeminiClient(new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! }).models) });
+  if (process.env.ANTHROPIC_API_KEY) list.push({ name: "anthropic-claude", model: CLAUDE_MODEL, make: () => createClaudeClient(new Anthropic().beta.messages) });
+  return process.env.AI_PROVIDER === "claude" ? list.reverse() : list;
+};
+
 let defaultClient: AiClient | null = null;
 function getDefaultClient(): AiClient {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new AiError("AI features are not configured on this server (missing GEMINI_API_KEY).", 503);
-  defaultClient ??= createGeminiClient(new GoogleGenAI({ apiKey }).models);
+  if (defaultClient) return defaultClient;
+  const list = providers();
+  if (!list.length) throw new AiError("AI features are not configured on this server (set GEMINI_API_KEY or ANTHROPIC_API_KEY).", 503);
+  defaultClient = withFallback(list.map((p) => p.make()));
   return defaultClient;
 }
 
 let override: AiClient | null = null;
 export const setAiClient = (c: AiClient | null) => { override = c; };
-export const aiInfo = () => ({ provider: "google-gemini", model: GEMINI_MODEL, configured: !!process.env.GEMINI_API_KEY || !!override });
+export const aiInfo = () => {
+  const list = providers();
+  return { provider: list[0]?.name ?? "none", model: list[0]?.model ?? null, fallback: list[1]?.name ?? null, configured: list.length > 0 || !!override };
+};
 
 // Bounded in-process queue: caps concurrent paid requests per instance and sheds load when saturated.
 // Future path: replace with a durable job queue + workers (see docs/ARCHITECTURE.md).

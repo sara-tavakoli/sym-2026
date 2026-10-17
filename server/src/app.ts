@@ -20,6 +20,8 @@ export function createApp() {
   ensureDemoDirectory();
   const app = express();
   app.disable("x-powered-by");
+  // Behind one hosting proxy (Railway): use X-Forwarded-For for per-IP rate limits.
+  if (process.env.TRUST_PROXY) app.set("trust proxy", Number(process.env.TRUST_PROXY));
   app.use(helmet());
   app.use(express.json({ limit: "100kb" }));
   app.use(cookieParser());
