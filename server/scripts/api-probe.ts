@@ -160,3 +160,4 @@ for (const [m, p, b] of [["POST", "/api/assistant/chat", { messages: [{ role: "u
   check(r.status === 503 && typeof r.data.error === "string", `AI ${p} -> ${r.status} ${JSON.stringify(r.data).slice(0, 100)}`);
 }
 console.log(fails.length ? `\n${fails.length} problems` : "\nPROBE OK");
+export {};
