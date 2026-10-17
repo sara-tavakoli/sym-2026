@@ -15,7 +15,7 @@ tasksRouter.use(requireAuth);
 
 const pid = (req: Request) => (req.params as Record<string, string>).id;
 const norm = (s: string) => s.toLowerCase().replace(/[\s ]+/g, " ").trim();
-const TASK_COLS = "id, appointment_id, instruction_id, title, source_text, deadline, status, needs_clarification, clarification_reason, notes, created_at, updated_at, assignee_user_id";
+const TASK_COLS = "id, appointment_id, instruction_id, title, source_text, deadline, due_date, status, needs_clarification, clarification_reason, notes, created_at, updated_at, assignee_user_id";
 // Care circle: the name of the member who has taken the task on (unqualified column resolves to the outer task row).
 const ASSIGNEE = "(SELECT u.name FROM users u WHERE u.id = assignee_user_id) AS assignee_name";
 

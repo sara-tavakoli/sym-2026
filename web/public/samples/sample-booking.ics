@@ -1,0 +1,16 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//CarePath demo//Fictional sample//EN
+CALSCALE:GREGORIAN
+BEGIN:VEVENT
+UID:fictional-sample-0002@carepath.example
+DTSTAMP:20261018T000000Z
+DTSTART;TZID=Australia/Sydney:20261104T091500
+DTEND;TZID=Australia/Sydney:20261104T093000
+SUMMARY:Appointment with Dr Mei Sample
+LOCATION:Bayview Family Practice\, 3 Harbour Parade\, Seaside NSW 2999
+DESCRIPTION:Appointment type: Standard consultation\nReason for visit: Rev
+ iew blood test results\n(Fictional sample booking for the CarePath demo. N
+ ot a real appointment.)
+END:VEVENT
+END:VCALENDAR

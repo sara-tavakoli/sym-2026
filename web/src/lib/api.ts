@@ -69,7 +69,7 @@ export interface Brief { id: string; status: "draft" | "confirmed"; updated_at: 
 
 export type TaskStatus = "todo" | "in_progress" | "completed";
 export interface Task {
-  id: string; appointment_id: string; title: string; source_text: string; deadline: string | null; status: TaskStatus;
+  id: string; appointment_id: string; title: string; source_text: string; deadline: string | null; due_date?: string | null; status: TaskStatus;
   needs_clarification: number; clarification_reason: string | null; notes: string | null; created_at: string; updated_at: string;
   practitioner_name?: string; starts_at?: string;
   assignee_user_id?: string | null; assignee_name?: string | null; // care circle

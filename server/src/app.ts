@@ -7,6 +7,7 @@ import { ZodError } from "zod";
 import "./db.js";
 import "./schema-circle.js";
 import "./schema-shares.js";
+import "./schema-nudges.js";
 import { authRouter } from "./routes/auth.js";
 import { appointmentsRouter } from "./routes/appointments.js";
 import { dashboardRouter } from "./routes/dashboard.js";
@@ -20,6 +21,8 @@ import { circleRouter, supportingRouter } from "./routes/circle.js";
 import { publicShareRouter, shareHeaders, sharesRouter } from "./routes/shares.js";
 import { ensureDemoDirectory } from "./providers/demo-data.js";
 import { demoRouter, purgeDemoAccounts } from "./demo.js";
+import { importRouter } from "./routes/import.js";
+import { attentionRouter } from "./routes/attention.js";
 
 export function createApp() {
   ensureDemoDirectory();
@@ -37,6 +40,7 @@ export function createApp() {
   app.use("/api/auth", authRouter);
   app.use("/api/demo", demoRouter);
   app.get("/api/ai/info", (_req, res) => res.json(aiInfo()));
+  app.use("/api/appointments/import", importRouter); // must precede the /:id routers
   app.use("/api/appointments/:id", prepRouter);
   app.use("/api/appointments/:id", instructionsRouter);
   app.use("/api/appointments/:id", sharesRouter);
@@ -45,6 +49,7 @@ export function createApp() {
   app.use("/api/assistant", assistantRouter);
   app.use("/api/drafts", draftsRouter);
   app.use("/api/fit-finder", fitFinderRouter);
+  app.use("/api/dashboard/attention", attentionRouter);
   app.use("/api/dashboard", dashboardRouter);
   app.use("/api/circle", circleRouter);
   app.use("/api/supporting", supportingRouter);

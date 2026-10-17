@@ -5,6 +5,7 @@ import { useApp } from "../lib/app-context";
 import { PlanBadge, PrepBadge, Skeletons } from "../components/ui";
 import { Assistant } from "../components/Assistant";
 import { CircleCard } from "../components/CircleBits";
+import { NeedsAttention } from "../components/NeedsAttention";
 
 type Appt = DashboardData["upcoming"][number];
 
@@ -47,6 +48,8 @@ export default function Dashboard() {
           <Link className="btn" to="/app/follow-up">Add visit notes</Link>
         </div>
       </div>
+
+      <NeedsAttention />
 
       <Assistant variant="panel" />
 
