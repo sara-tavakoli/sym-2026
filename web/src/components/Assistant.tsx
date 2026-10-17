@@ -6,10 +6,10 @@ import { Spinner } from "./ui";
 import { useApp } from "../lib/app-context";
 
 const EXAMPLES = [
-  "I have an appointment coming up and want help organising what to discuss",
-  "What should I bring to my first GP appointment in Australia?",
-  "I got instructions after my visit and want to keep track of them",
-  "I need a dentist around Sydney who offers Saturday appointments",
+  "Help me get ready for my next appointment",
+  "I got instructions after my visit. Where do they go?",
+  "Find a bulk-billing GP near Macquarie Park open on Saturday",
+  "What can CarePath help me with?",
 ];
 const MAX_LEN = 2000;
 const HISTORY = 20; // most recent messages sent as context

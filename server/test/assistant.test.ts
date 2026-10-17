@@ -160,14 +160,41 @@ test("prepare conversations with enough detail offer to create a brief", async (
   assert.equal(detail.data.actions[0].kind, "create_brief");
 });
 
-test("malformed model output and missing key return clean errors", async () => {
+test("malformed model output is a clean error; without a key a rules-based guide answers", async () => {
   const c = await user("err@example.com");
   setAiClient({ async json() { return { reply: "", intent: "nonsense" }; } });
   assert.equal((await c.call("POST", "/api/assistant/chat", say("hello"))).status, 502);
   setAiClient(null);
-  const r = await c.call("POST", "/api/assistant/chat", say("hello"));
-  assert.equal(r.status, 503);
-  assert.match(r.data.error, /not configured/);
+  const hello = await c.call("POST", "/api/assistant/chat", say("hello"));
+  assert.equal(hello.status, 200);
+  assert.equal(hello.data.intent, "general");
+  assert.ok(hello.data.actions.length >= 3);
+  const after = await c.call("POST", "/api/assistant/chat", say("I got instructions after my visit"));
+  assert.equal(after.data.intent, "follow_up");
+  assert.equal(after.data.actions[0].href, "/app/follow-up");
+  const find = await c.call("POST", "/api/assistant/chat", say("I need a bulk billing dentist near Ryde"));
+  assert.equal(find.data.intent, "find_provider");
+  const prep = await c.call("POST", "/api/assistant/chat", say("Help me prepare for my appointment"));
+  assert.equal(prep.data.intent, "prepare");
+  assert.ok(!prep.data.actions.some((a: { kind: string }) => a.kind === "create_brief"), "chat-to-brief needs AI");
+  const symptom = await c.call("POST", "/api/assistant/chat", say("What could it be? Is it serious?"));
+  assert.equal(symptom.data.intent, "symptom_question");
+});
+
+test("the assistant only guides people around CarePath: technical and general questions are declined", async () => {
+  const c = await user("scope@example.com");
+  let called = false;
+  setAiClient({ async json() { called = true; return { reply: "Sure, here is some Python code", intent: "general", preferences: [] }; } });
+  for (const q of ["Can you write me some Python code?", "What's the capital of France?", "Help me with my maths homework", "Explain how blockchain works and write an essay"]) {
+    const r = await c.call("POST", "/api/assistant/chat", say(q));
+    assert.equal(r.data.intent, "out_of_scope", q);
+    assert.match(r.data.reply, /find your way around CarePath/);
+  }
+  assert.equal(called, false, "off-topic questions never reach the model");
+  setAiClient({ async json() { return { reply: "The capital of Peru is Lima.", intent: "out_of_scope", preferences: [] }; } });
+  const r = await c.call("POST", "/api/assistant/chat", say("Tell me about Peru"));
+  assert.match(r.data.reply, /find your way around CarePath/);
+  setAiClient(null);
 });
 
 test("conversations are not stored in the database", async () => {

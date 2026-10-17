@@ -140,7 +140,7 @@ before(async () => {
 });
 after(() => server.close());
 
-test("without a key, briefs and tasks fall back to rules-based organising; other AI routes return a clear 503", async () => {
+test("without a key, briefs and tasks fall back to rules-based organising; the assistant uses its rules-based guide", async () => {
   let cookie = "";
   const call = async (method: string, path: string, body?: unknown) => {
     const r = await fetch(base + path, { method, headers: { "content-type": "application/json", cookie }, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -161,6 +161,6 @@ test("without a key, briefs and tasks fall back to rules-based organising; other
   const ex = await call("POST", `/api/appointments/${id}/instructions/extract`, { text: "Book a review." });
   assert.equal(ex.status, 200);
   assert.deepEqual([ex.data.source, ex.data.tasks.length], ["rules", 1]);
-  assert.equal((await call("POST", "/api/assistant/chat", { messages: [{ role: "user", content: "Hello" }] })).status, 503);
+  assert.equal((await call("POST", "/api/assistant/chat", { messages: [{ role: "user", content: "Hello" }] })).data.intent, "general");
   assert.deepEqual((await call("GET", "/api/ai/info")).data, { provider: "google-gemini", model: "gemini-3.8-flash", configured: false });
 });

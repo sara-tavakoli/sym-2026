@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "../db.js";
 import { requireAuth } from "../auth.js";
 import { chatLimiter } from "../ai/limit.js";
-import { AiError } from "../ai/client.js";
+import { AiError, aiConfigured } from "../ai/client.js";
 import { assistantReply, type Intent } from "../ai/assistant.js";
 import { verifyPreferences, type ExtractedPrefs } from "../ai/preferences.js";
 import { directory } from "../providers/directory.js";
@@ -43,7 +43,12 @@ function actionsFor(intent: Intent, selfHarm: boolean, appts: { id: string; prac
     case "follow_up":
       return [{ label: "Open Follow-up tracker", href: "/app/follow-up", kind: "internal" }];
     default:
-      return [];
+      // General or off-topic: point to the main features instead of a dead end.
+      return [
+        { label: "Prepare for an appointment", href: appts[0] ? `/app/appointments/${appts[0].id}/prepare` : "/app/preparation", kind: "internal" },
+        { label: "Open Follow-up tracker", href: "/app/follow-up", kind: "internal" },
+        { label: "Open Fit Finder", href: "/app/fit-finder", kind: "internal" },
+      ];
   }
 }
 
@@ -58,7 +63,8 @@ assistantRouter.post("/chat", chatLimiter, async (req, res) => {
     const userText = messages.filter((m) => m.role === "user").map((m) => m.content);
     // Offer a brief once the user has shared details (a follow-up message or one substantial message),
     // not on the opening request alone. The server still refuses if nothing usable was said.
-    const canBrief = r.intent === "prepare" && (userText.length >= 2 || userText.join(" ").length >= 120);
+    // Turning a chat into a brief needs the model to pick out the user's words, so it's offered only when AI is configured.
+    const canBrief = aiConfigured() && r.intent === "prepare" && (userText.length >= 2 || userText.join(" ").length >= 120);
     // Provider requests: the model's proposed preferences are kept only if quoted from the user's own recent messages.
     let search: (ExtractedPrefs & { location_known: boolean | null; location_resolved: string | null }) | null = null;
     if (r.intent === "find_provider") {
