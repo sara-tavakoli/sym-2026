@@ -5,8 +5,8 @@ import { Disclaimer, Icon, Logo } from "./ui";
 const links = [
   { to: "/app", label: "Dashboard", short: "Home", icon: "home", end: true },
   { to: "/app/appointments", label: "Appointments", short: "Visits", icon: "calendar" },
-  { to: "/app/preparation", label: "AI Preparation", short: "Prepare", icon: "sparkle", soon: "Phase 2" },
-  { to: "/app/follow-up", label: "Follow-Up Tracker", short: "Tasks", icon: "check", soon: "Phase 3" },
+  { to: "/app/preparation", label: "AI Preparation", short: "Prepare", icon: "sparkle" },
+  { to: "/app/follow-up", label: "Follow-Up Tracker", short: "Tasks", icon: "check" },
   { to: "/app/settings", label: "Settings", short: "Settings", icon: "gear" },
 ] as const;
 
@@ -21,7 +21,7 @@ export function Layout() {
           <nav className="nav" aria-label="Main">
             {links.map((l) => (
               <NavLink key={l.to} to={l.to} end={"end" in l && l.end}>
-                <Icon name={l.icon} /> {l.label} {"soon" in l && <span className="soon">{l.soon}</span>}
+                <Icon name={l.icon} /> {l.label}
               </NavLink>
             ))}
           </nav>

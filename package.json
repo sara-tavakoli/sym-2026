@@ -12,7 +12,11 @@
     "build": "vite build --config web/vite.config.ts",
     "start": "tsx --env-file-if-exists=.env server/src/index.ts",
     "typecheck": "tsc -p server --noEmit && tsc -p web --noEmit",
-    "test": "tsx --test server/test/*.test.ts"
+    "test": "tsx --test server/test/*.test.ts",
+    "eval": "tsx --env-file-if-exists=.env server/eval/run.ts",
+    "ui-smoke": "tsx server/scripts/ui-smoke.ts",
+    "ui-journey": "tsx server/scripts/ui-journey.ts",
+    "seed": "tsx --env-file-if-exists=.env server/scripts/seed.ts"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",
@@ -31,6 +35,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "playwright-core": "^1.64.1",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.4"

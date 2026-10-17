@@ -4,6 +4,7 @@ import { api, ApiError, fmtDateTime, type Appointment } from "../lib/api";
 import { useApp } from "../lib/app-context";
 import { AppointmentForm } from "../components/AppointmentForm";
 import { Modal, PrepBadge, Skeletons, Spinner } from "../components/ui";
+import { FollowUpPanel } from "../components/FollowUpPanel";
 
 export default function AppointmentDetail() {
   const { id } = useParams();
@@ -19,11 +20,15 @@ export default function AppointmentDetail() {
     api.get<Appointment>(`/appointments/${id}`).then(setAppt).catch((e: ApiError) => setError(e.status === 404 ? "We couldn't find that appointment." : e.message));
   }, [id]);
 
+  const refresh = () => { api.get<Appointment>(`/appointments/${id}`).then(setAppt).catch(() => {}); };
+
   async function remove() {
     setBusy(true);
     try { await api.del(`/appointments/${id}`); notify("Appointment deleted"); nav("/app/appointments", { replace: true }); }
     catch (e) { notify(e instanceof ApiError ? e.message : "Could not delete", "error"); setBusy(false); setConfirmDelete(false); }
   }
+
+  useEffect(() => { if (appt && location.hash === "#follow-up") document.getElementById("follow-up")?.scrollIntoView(); }, [appt?.id]);
 
   if (error) return <div className="card empty"><h3>{error}</h3><Link className="btn" to="/app/appointments">Back to appointments</Link></div>;
   if (!appt) return <Skeletons rows={3} />;
@@ -52,16 +57,21 @@ export default function AppointmentDetail() {
         </dl>
       </section>
 
-      <div className="grid cols-2">
-        <section className="card">
-          <div className="card-head"><h2>Appointment preparation</h2><PrepBadge status={appt.prep_status} /></div>
-          <p className="muted">AI-assisted preparation briefs arrive in Phase 2. Nothing has been prepared for this appointment yet.</p>
-        </section>
-        <section className="card">
-          <div className="card-head"><h2>Follow-up</h2></div>
-          <p className="muted">Visit instructions and follow-up tasks arrive in Phase 3. This appointment has {appt.open_tasks} outstanding and {appt.done_tasks} completed tasks.</p>
-        </section>
-      </div>
+      <section className="card" aria-labelledby="prep-h">
+        <div className="card-head"><h2 id="prep-h">Appointment preparation</h2><PrepBadge status={appt.prep_status} /></div>
+        <p className="muted">{appt.prep_status === "confirmed" ? "Your brief is confirmed and ready to take with you." : appt.prep_status === "none" ? "Write down your concerns and questions and CarePath will organise them into a brief you can edit." : "You've started preparing. Pick up where you left off."}</p>
+        <div className="row">
+          <Link className="btn primary" to={`/app/appointments/${appt.id}/prepare`}>{appt.prep_status === "none" ? "Prepare for this appointment" : "Open preparation"}</Link>
+          {(appt.prep_status === "draft" || appt.prep_status === "confirmed") && <Link className="btn" to={`/app/appointments/${appt.id}/brief`}>Printable brief</Link>}
+        </div>
+      </section>
+
+      <section className="card" id="follow-up" aria-labelledby="fu-h">
+        <div className="card-head"><h2 id="fu-h">After the visit</h2>
+          <span className="badge">{appt.open_tasks} open · {appt.done_tasks} done</span></div>
+        {!isPast && <div className="alert info">This appointment hasn't happened yet. You can add instructions once you've received them.</div>}
+        <FollowUpPanel appointmentId={appt.id} onChanged={refresh} />
+      </section>
 
       {editing && <AppointmentForm existing={appt} onClose={() => setEditing(false)} onSaved={(a) => { setAppt(a); setEditing(false); notify("Changes saved"); }} />}
       {confirmDelete && (

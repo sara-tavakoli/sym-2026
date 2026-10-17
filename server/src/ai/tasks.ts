@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { generate } from "./client.js";
+import { injectionSentences, isExplicitDeadline, overlapsInjection } from "./safety.js";
 
 const item = z.object({
   title: z.string().min(1).max(200),
@@ -51,14 +52,16 @@ export interface ProposedTask {
 export function verifyTasks(raw: z.infer<typeof output>, text: string): ProposedTask[] {
   const hay = norm(text);
   const seen = new Set<string>();
+  const injected = injectionSentences(text);
   const out: ProposedTask[] = [];
   for (const t of raw.tasks) {
     const source = t.source_text.trim();
     if (!hay.includes(norm(source)) || seen.has(norm(source))) continue; // not traceable (or duplicate)
+    if (overlapsInjection(source, injected)) continue; // came from text that tries to instruct the AI
     seen.add(norm(source));
     const med = MEDICATION.test(source);
     const dl = t.deadline?.trim();
-    const deadline = dl && hay.includes(norm(dl)) ? dl : null;
+    const deadline = dl && hay.includes(norm(dl)) && isExplicitDeadline(dl) ? dl : null;
     const vague = VAGUE.test(source);
     const clarify = !!t.needs_clarification || vague || med;
     out.push({

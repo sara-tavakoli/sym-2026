@@ -14,7 +14,7 @@ export class AiError extends Error {
 
 const OLLAMA_URL = process.env.OLLAMA_URL ?? "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "qwen3.5:9b";
-const TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS ?? 120_000);
+const TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS ?? 180_000);
 const MAX_CONCURRENT = Number(process.env.AI_MAX_CONCURRENT ?? 1);
 const MAX_QUEUE = Number(process.env.AI_MAX_QUEUE ?? 8);
 

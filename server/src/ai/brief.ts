@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { generate } from "./client.js";
+import { injectionSentences, overlapsInjection } from "./safety.js";
 
 export const FIELDS = ["main_concern", "onset", "background", "experiences", "questions", "additional"] as const;
 export type Field = (typeof FIELDS)[number];
@@ -55,6 +56,7 @@ export interface BriefDraft { sections: Record<Section, GeneratedPoint[]>; dropp
 /** Keeps only points that are traceable to the patient's input; everything else is dropped and counted. */
 export function verifyBrief(raw: z.infer<typeof output>, input: PrepInput): BriefDraft {
   let dropped = 0;
+  const injected = Object.fromEntries(FIELDS.map((f) => [f, injectionSentences(input[f])])) as Record<Field, string[]>;
   const sections = {} as Record<Section, GeneratedPoint[]>;
   for (const s of SECTIONS) {
     sections[s] = [];
@@ -64,6 +66,7 @@ export function verifyBrief(raw: z.infer<typeof output>, input: PrepInput): Brie
         ALLOWED[s].includes(p.field) &&
         src.trim() !== "" &&
         quoteInField(p.quote, src) &&
+        !overlapsInjection(p.quote, injected[p.field]) &&
         !(CLINICAL.test(p.text) && !CLINICAL.test(src));
       if (ok) sections[s].push({ text: p.text.trim(), field: p.field, quote: p.quote.trim() });
       else dropped++;

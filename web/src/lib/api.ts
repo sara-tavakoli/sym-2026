@@ -24,6 +24,7 @@ export const api = {
   get: <T,>(p: string) => request<T>("GET", p),
   post: <T,>(p: string, b?: unknown) => request<T>("POST", p, b ?? {}),
   put: <T,>(p: string, b: unknown) => request<T>("PUT", p, b),
+  patch: <T,>(p: string, b: unknown) => request<T>("PATCH", p, b),
   del: <T,>(p: string) => request<T>("DELETE", p),
 };
 
@@ -53,3 +54,26 @@ export function toLocalInput(iso: string) {
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
   return d.toISOString().slice(0, 16);
 }
+
+export const FIELD_LABELS: Record<string, string> = {
+  main_concern: "Main concern", onset: "When it started", background: "Background", experiences: "What you've noticed", questions: "Your questions", additional: "Additional notes",
+};
+export type PrepNotes = Record<"main_concern" | "onset" | "background" | "experiences" | "questions" | "additional", string>;
+export const SECTION_KEYS = ["reason", "timeline", "background", "questions", "notes"] as const;
+export type SectionKey = (typeof SECTION_KEYS)[number];
+export const SECTION_TITLES: Record<SectionKey, string> = {
+  reason: "Main reason for the appointment", timeline: "Timeline", background: "Relevant background", questions: "Questions for the practitioner", notes: "Additional notes",
+};
+export interface BriefPoint { id: string; text: string; edited: boolean; user: boolean; field: string | null; quote: string | null }
+export interface Brief { id: string; status: "draft" | "confirmed"; updated_at: string; dropped: number; sections: Record<SectionKey, BriefPoint[]> }
+
+export type TaskStatus = "todo" | "in_progress" | "completed";
+export interface Task {
+  id: string; appointment_id: string; title: string; source_text: string; deadline: string | null; status: TaskStatus;
+  needs_clarification: number; clarification_reason: string | null; notes: string | null; created_at: string; updated_at: string;
+  practitioner_name?: string; starts_at?: string;
+}
+export interface ProposedTask {
+  title: string; source_text: string; deadline: string | null; needs_clarification: boolean; clarification_reason: string | null; is_medication: boolean; notes?: string;
+}
+export const STATUS_LABELS: Record<TaskStatus, string> = { todo: "To do", in_progress: "In progress", completed: "Completed" };

@@ -11,7 +11,10 @@ import Dashboard from "./pages/Dashboard";
 import Appointments from "./pages/Appointments";
 import AppointmentDetail from "./pages/AppointmentDetail";
 import Settings from "./pages/Settings";
-import Upcoming from "./pages/Upcoming";
+import Prepare from "./pages/Prepare";
+import BriefPrint from "./pages/BriefPrint";
+import PrepList from "./pages/PrepList";
+import FollowUp from "./pages/FollowUp";
 
 function Protected() {
   const { user, loading } = useApp();
@@ -31,8 +34,10 @@ createRoot(document.getElementById("root")!).render(
             <Route index element={<Dashboard />} />
             <Route path="appointments" element={<Appointments />} />
             <Route path="appointments/:id" element={<AppointmentDetail />} />
-            <Route path="preparation" element={<Upcoming title="AI Preparation" phase="Phase 2" description="Enter your concerns and questions in your own words and get an editable, source-linked appointment brief." />} />
-            <Route path="follow-up" element={<Upcoming title="Follow-Up Tracker" phase="Phase 3" description="Paste the instructions you were given and turn them into a checklist you review and confirm." />} />
+            <Route path="appointments/:id/prepare" element={<Prepare />} />
+            <Route path="appointments/:id/brief" element={<BriefPrint />} />
+            <Route path="preparation" element={<PrepList />} />
+            <Route path="follow-up" element={<FollowUp />} />
             <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
