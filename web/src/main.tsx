@@ -16,6 +16,7 @@ import BriefPrint from "./pages/BriefPrint";
 import PrepList from "./pages/PrepList";
 import FollowUp from "./pages/FollowUp";
 import AssistantPage from "./pages/AssistantPage";
+import FitFinder from "./pages/FitFinder";
 
 function Protected() {
   const { user, loading } = useApp();
@@ -38,6 +39,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="appointments/:id/prepare" element={<Prepare />} />
             <Route path="appointments/:id/brief" element={<BriefPrint />} />
             <Route path="assistant" element={<AssistantPage />} />
+            <Route path="fit-finder" element={<FitFinder />} />
             <Route path="preparation" element={<PrepList />} />
             <Route path="follow-up" element={<FollowUp />} />
             <Route path="settings" element={<Settings />} />

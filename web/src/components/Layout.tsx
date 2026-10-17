@@ -6,6 +6,7 @@ const links = [
   { to: "/app", label: "Dashboard", short: "Home", icon: "home", end: true },
   { to: "/app/appointments", label: "Appointments", short: "Visits", icon: "calendar" },
   { to: "/app/assistant", label: "AI Assistant", short: "Assistant", icon: "chat" },
+  { to: "/app/fit-finder", label: "Fit Finder", short: "Find", icon: "search" },
   { to: "/app/preparation", label: "AI Preparation", short: "Prepare", icon: "sparkle" },
   { to: "/app/follow-up", label: "Follow-Up Tracker", short: "Tasks", icon: "check" },
   { to: "/app/settings", label: "Settings", short: "Settings", icon: "gear" },
@@ -35,6 +36,7 @@ export function Layout() {
           <header className="topbar">
             <Link to="/app" className="brand"><Logo size={28} /> CarePath AI</Link>
             <div className="row" style={{ gap: ".4rem" }}>
+              <NavLink to="/app/fit-finder" className="btn sm ghost" aria-label="Fit Finder"><Icon name="search" /></NavLink>
               <NavLink to="/app/settings" className="btn sm ghost" aria-label="Settings"><Icon name="gear" /></NavLink>
               <button className="btn sm" onClick={logout}>Log out</button>
             </div>
@@ -46,7 +48,7 @@ export function Layout() {
         </div>
       </div>
       <nav className="bottomnav" aria-label="Main mobile">
-        {links.filter((l) => l.to !== "/app/settings").map((l) => (
+        {links.filter((l) => l.to !== "/app/settings" && l.to !== "/app/fit-finder").map((l) => (
           <NavLink key={l.to} to={l.to} end={"end" in l && l.end}><Icon name={l.icon} />{l.short}</NavLink>
         ))}
       </nav>

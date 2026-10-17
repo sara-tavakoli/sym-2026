@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, type Appointment, type Page } from "../lib/api";
 import { useApp } from "../lib/app-context";
-import { AppointmentForm } from "../components/AppointmentForm";
+import { AppointmentForm, type AppointmentPrefill } from "../components/AppointmentForm";
 import { PrepBadge, Skeletons } from "../components/ui";
 
 type Scope = "upcoming" | "past";
@@ -16,6 +16,10 @@ export default function Appointments() {
   const [data, setData] = useState<Page<Appointment> | null>(null);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(params.get("new") === "1");
+  // Optional prefill when arriving from Fit Finder ("Add to my appointments").
+  const [prefill, setPrefill] = useState<AppointmentPrefill | undefined>(() => params.get("new") === "1" && (params.get("practitioner") || params.get("clinic"))
+    ? { practitioner_name: params.get("practitioner") ?? undefined, clinic_name: params.get("clinic") ?? undefined, service_type: params.get("service") ?? undefined, location: params.get("location") ?? undefined }
+    : undefined);
 
   const load = useCallback(() => {
     setError("");
@@ -24,7 +28,7 @@ export default function Appointments() {
   useEffect(() => { setData(null); load(); }, [load]);
 
   const pages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
-  const closeForm = () => { setCreating(false); if (params.has("new")) { params.delete("new"); setParams(params, { replace: true }); } };
+  const closeForm = () => { setCreating(false); setPrefill(undefined); if (params.has("new")) { for (const k of ["new", "practitioner", "clinic", "service", "location"]) params.delete(k); setParams(params, { replace: true }); } };
 
   return (
     <div className="fade-in">
@@ -76,7 +80,7 @@ export default function Appointments() {
         )}
       </div>
 
-      {creating && <AppointmentForm onClose={closeForm} onSaved={() => { closeForm(); notify("Appointment created"); load(); }} />}
+      {creating && <AppointmentForm prefill={prefill} onClose={closeForm} onSaved={() => { closeForm(); notify("Appointment created"); load(); }} />}
     </div>
   );
 }
