@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import type { PrepStatus } from "../lib/api";
 
 export function Logo({ size = 32 }: { size?: number }) {
@@ -77,13 +78,15 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
     document.addEventListener("keydown", onKey);
     return () => { document.removeEventListener("keydown", onKey); prev?.focus(); };
   }, [onClose]);
-  return (
+  // Portalled to <body> so the overlay always covers the viewport, even inside an animated page container.
+  return createPortal(
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" role="dialog" aria-modal="true" aria-label={title} ref={ref}>
         <h2>{title}</h2>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

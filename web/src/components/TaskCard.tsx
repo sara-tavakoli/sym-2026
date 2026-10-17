@@ -53,7 +53,7 @@ export function TaskCard({ task, onChange, onDelete, showAppointment }: { task: 
 
         <p className="task-meta">
           {task.deadline && !editing && (due ? <span className={`badge ${due.tone}`} title={`“${task.deadline}”`}>{due.label}</span> : <span>Due {task.deadline}</span>)}
-          {task.assignee_name && <span className="badge ok">Assigned to {task.assignee_name}</span>}
+          {task.assignee_name && <span className="badge">Assigned to {task.assignee_name}</span>}
           {showAppointment && task.practitioner_name && <Link to={`/app/appointments/${task.appointment_id}#follow-up`}>{task.practitioner_name}</Link>}
           {task.source_text === "Added manually" && <span>Added by you</span>}
         </p>

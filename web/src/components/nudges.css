@@ -1,7 +1,7 @@
 /* ---------- Needs attention (dashboard nudges) ----------
    A panel of divided rows, like the rest of the dashboard. Severity reads from a slim bar
    and the category label, not from boxed, tinted cards. */
-.attn { padding-bottom: .35rem; }
+.attn { padding-bottom: .35rem; margin-bottom: 1.25rem; }
 .attn .panel-head { align-items: center; }
 .attn-list { list-style: none; margin: 0; padding: 0; }
 .attn-item { position: relative; display: flex; gap: 1.25rem; align-items: flex-start; padding: .95rem 0 .95rem 1rem; }
