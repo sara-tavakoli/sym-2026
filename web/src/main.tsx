@@ -16,6 +16,7 @@ import BriefPrint from "./pages/BriefPrint";
 import PrepList from "./pages/PrepList";
 import FollowUp from "./pages/FollowUp";
 import AssistantPage from "./pages/AssistantPage";
+import ClinicianView from "./pages/ClinicianView";
 
 function Protected() {
   const { user, loading } = useApp();
@@ -31,6 +32,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Auth mode="login" />} />
           <Route path="/register" element={<Auth mode="register" />} />
+          <Route path="/c/:token" element={<ClinicianView />} />
           <Route path="/app" element={<Protected />}>
             <Route index element={<Dashboard />} />
             <Route path="appointments" element={<Appointments />} />

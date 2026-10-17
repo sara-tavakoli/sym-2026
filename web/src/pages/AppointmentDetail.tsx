@@ -5,6 +5,9 @@ import { useApp } from "../lib/app-context";
 import { AppointmentForm } from "../components/AppointmentForm";
 import { Modal, PrepBadge, Skeletons, Spinner } from "../components/ui";
 import { FollowUpPanel } from "../components/FollowUpPanel";
+import { ShareCard } from "../components/ShareCard";
+import { ClinicianPlans } from "../components/ClinicianPlans";
+import { markPlanImported } from "../lib/shares";
 
 export default function AppointmentDetail() {
   const { id } = useParams();
@@ -15,6 +18,9 @@ export default function AppointmentDetail() {
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState(false);
+  // A clinician plan being turned into a checklist; marked imported once its tasks are confirmed.
+  const [planDraft, setPlanDraft] = useState<{ id: string; text: string; key: number } | null>(null);
+  const [plansKey, setPlansKey] = useState(0);
 
   useEffect(() => {
     api.get<Appointment>(`/appointments/${id}`).then(setAppt).catch((e: ApiError) => setError(e.status === 404 ? "We couldn't find that appointment." : e.message));
@@ -66,11 +72,15 @@ export default function AppointmentDetail() {
         </div>
       </section>
 
+      <ShareCard appt={appt} />
+
       <section className="card" id="follow-up" aria-labelledby="fu-h">
         <div className="card-head"><h2 id="fu-h">After the visit</h2>
           <span className="badge">{appt.open_tasks} open · {appt.done_tasks} done</span></div>
         {!isPast && <div className="alert info">This appointment hasn't happened yet. You can add instructions once you've received them.</div>}
-        <FollowUpPanel appointmentId={appt.id} onChanged={refresh} />
+        <ClinicianPlans appointmentId={appt.id} reloadKey={plansKey} activeId={planDraft?.id} onUse={(p) => setPlanDraft({ id: p.id, text: p.text, key: Date.now() })} />
+        <FollowUpPanel appointmentId={appt.id} onChanged={refresh} prefill={planDraft ?? undefined}
+          onConfirmed={() => { if (planDraft) markPlanImported(appt.id, planDraft.id).catch(() => {}).finally(() => { setPlanDraft(null); setPlansKey((k) => k + 1); refresh(); }); }} />
       </section>
 
       {editing && <AppointmentForm existing={appt} onClose={() => setEditing(false)} onSaved={(a) => { setAppt(a); setEditing(false); notify("Changes saved"); }} />}

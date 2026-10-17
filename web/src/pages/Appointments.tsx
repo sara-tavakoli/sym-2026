@@ -3,7 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { api, type Appointment, type Page } from "../lib/api";
 import { useApp } from "../lib/app-context";
 import { AppointmentForm } from "../components/AppointmentForm";
-import { PrepBadge, Skeletons } from "../components/ui";
+import { PlanBadge, PrepBadge, Skeletons } from "../components/ui";
 
 type Scope = "upcoming" | "past";
 const PAGE_SIZE = 8;
@@ -61,6 +61,7 @@ export default function Appointments() {
                 <div className="item-sub">{a.clinic_name} · {d.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" })}{a.purpose ? ` · ${a.purpose}` : ""}</div>
               </div>
               <div className="row" style={{ justifyContent: "flex-end" }}>
+                <PlanBadge count={a.pending_plans} />
                 <PrepBadge status={a.prep_status} />
                 {a.open_tasks > 0 && <span className="badge warn">{a.open_tasks} open task{a.open_tasks > 1 ? "s" : ""}</span>}
               </div>
