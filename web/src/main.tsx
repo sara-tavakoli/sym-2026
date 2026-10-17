@@ -21,6 +21,7 @@ import CareCircle from "./pages/CareCircle";
 import SupportingList, { SupportingDetail } from "./pages/Supporting";
 import Join from "./pages/Join";
 import ClinicianView from "./pages/ClinicianView";
+import FitFinder from "./pages/FitFinder";
 
 function Protected() {
   const { user, loading } = useApp();
@@ -46,6 +47,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="appointments/:id/prepare" element={<Prepare />} />
             <Route path="appointments/:id/brief" element={<BriefPrint />} />
             <Route path="assistant" element={<AssistantPage />} />
+            <Route path="fit-finder" element={<FitFinder />} />
             <Route path="preparation" element={<PrepList />} />
             <Route path="follow-up" element={<FollowUp />} />
             <Route path="settings" element={<Settings />} />

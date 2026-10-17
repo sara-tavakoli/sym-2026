@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { Link } from "react-router-dom";
-import { api, ApiError, type AssistantReply, type ChatMessage } from "../lib/api";
+import { api, ApiError, prefsToQuery, type AssistantReply, type ChatMessage } from "../lib/api";
 import { useApp } from "../lib/app-context";
 
 const EXAMPLES = [
@@ -101,7 +101,7 @@ export function Assistant({ variant = "panel" }: { variant?: "panel" | "page" })
             <ul>
               <li>Diagnose, explain symptoms or judge urgency</li>
               <li>Recommend medicines, tests or treatments</li>
-              <li>Book appointments or search providers (provider search is coming soon)</li>
+              <li>Book appointments (use Fit Finder to compare clinics, then book with the clinic)</li>
             </ul>
           </div>
         </div>
@@ -128,7 +128,7 @@ export function Assistant({ variant = "panel" }: { variant?: "panel" | "page" })
               {m.actions && m.actions.length > 0 && (
                 <div className="msg-actions">
                   {m.actions.map((a) =>
-                    a.kind === "internal" ? <Link key={a.href} className="btn sm" to={a.href}>{a.label}</Link>
+                    a.kind === "internal" ? <Link key={a.href} className="btn sm" to={a.href === "/app/fit-finder" && m.search && Object.keys(m.search.prefs).length ? `${a.href}?${prefsToQuery(m.search.prefs)}&from=assistant` : a.href}>{a.label}</Link>
                     : a.kind === "phone" ? <a key={a.href} className="btn sm danger solid" href={a.href}>{a.label}</a>
                     : <a key={a.href} className="btn sm" href={a.href} target="_blank" rel="noreferrer">{a.label} <span aria-hidden="true">↗</span><span className="sr-only">(opens in a new tab)</span></a>
                   )}
