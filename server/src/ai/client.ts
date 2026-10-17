@@ -143,7 +143,10 @@ let override: AiClient | null = null;
 export const setAiClient = (c: AiClient | null) => { override = c; };
 export const aiInfo = () => {
   const list = providers();
-  return { provider: list[0]?.name ?? "none", model: list[0]?.model ?? null, fallback: list[1]?.name ?? null, configured: list.length > 0 || !!override };
+  return {
+    provider: list[0]?.name ?? "google-gemini", model: list[0]?.model ?? GEMINI_MODEL,
+    ...(list[1] ? { fallback: list[1].name } : {}), configured: list.length > 0 || !!override,
+  };
 };
 
 // Bounded in-process queue: caps concurrent paid requests per instance and sheds load when saturated.
