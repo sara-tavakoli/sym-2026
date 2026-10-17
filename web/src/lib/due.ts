@@ -13,7 +13,7 @@ export interface DueInfo { label: string; tone: "danger" | "warn" | "info" }
 
 export function dueInfo(dueDate: string | null | undefined, completed = false): DueInfo | null {
   if (!dueDate || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return null;
-  if (completed) return { label: `Was due ${fmtDueDay(dueDate)}`, tone: "info" };
+  if (completed) return { label: `Due ${fmtDueDay(dueDate)}`, tone: "info" };
   const days = Math.round((utc(dueDate) - utc(localToday())) / 864e5);
   if (days < 0) return { label: `Overdue by ${-days} day${days === -1 ? "" : "s"}`, tone: "danger" };
   if (days === 0) return { label: "Due today", tone: "warn" };
