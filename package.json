@@ -20,6 +20,7 @@
     "ui-fitfinder": "tsx server/scripts/ui-fitfinder.ts",
     "ui-ai-features": "tsx server/scripts/ui-ai-features.ts",
     "ui-journey": "tsx server/scripts/ui-journey.ts",
+    "ui-audit": "tsx server/scripts/ui-audit.ts",
     "seed": "tsx --env-file-if-exists=.env server/scripts/seed.ts"
   },
   "dependencies": {
