@@ -1,0 +1,95 @@
+import { Router } from "express";
+import rateLimit from "express-rate-limit";
+import { randomBytes } from "node:crypto";
+import { db } from "./db.js";
+import { SESSION_COOKIE, createSession, hashPassword, newId } from "./auth.js";
+import { saveBrief } from "./routes/prep.js";
+import type { ViewSections } from "./briefs.js";
+
+// One-click demo: every visitor gets a private, throwaway account seeded with FICTIONAL data,
+// so judges can click through real flows without colliding with each other. Accounts expire after 24 h.
+export const DEMO_DOMAIN = "demo.carepath.example";
+const DEMO_TTL_HOURS = 24;
+
+export const demoRouter = Router();
+const limiter = rateLimit({
+  windowMs: 60 * 60_000, limit: Number(process.env.DEMO_RATE_LIMIT_PER_HOUR ?? 30), standardHeaders: true, legacyHeaders: false,
+  message: { error: "Too many demo accounts from this network. Please try again later." },
+});
+
+const at = (days: number, hour: number, minute = 0) => {
+  const d = new Date(); d.setDate(d.getDate() + days); d.setHours(hour, minute, 0, 0); return d.toISOString();
+};
+
+const point = (text: string, field: string, quote: string) => ({ id: newId(), text, edited: false, user: false, field, quote });
+
+/** Seeds a realistic, fictional patient journey: before (prepared brief), after (instructions + tasks), plus a visit to prepare for. */
+export function seedDemo(uid: string) {
+  const appt = db.prepare(`INSERT INTO appointments (id, user_id, starts_at, practitioner_name, service_type, clinic_name, location, purpose)
+                           VALUES (?,?,?,?,?,?,?,?)`);
+  const gp = newId(), past = newId(), dental = newId();
+  appt.run(gp, uid, at(2, 10, 15), "Dr Priya Lee", "General Practitioner (GP)", "Harbourside Family Practice (fictional)", "12 Example St, Sydney NSW 2000", "Headaches and feeling tired");
+  appt.run(past, uid, at(-5, 14, 30), "Dr Priya Lee", "General Practitioner (GP)", "Harbourside Family Practice (fictional)", "12 Example St, Sydney NSW 2000", "Dizziness when standing up");
+  appt.run(dental, uid, at(1, 16, 0), "Dr Tom Nguyen", "Dentist", "Smile Bright Dental (fictional)", "88 Sample Rd, Newtown NSW 2042", "Check-up and clean");
+
+  const notes = {
+    main_concern: "I keep getting headaches most afternoons and I feel tired even after sleeping 8 hours.",
+    onset: "Started about three weeks ago, around when semester exams began.",
+    background: "I wear glasses for reading. I had my iron checked last year and it was a bit low.",
+    experiences: "Headaches are worse after long study sessions on my laptop. Better on weekends. Coffee helps a little.",
+    questions: "Could my screen time be causing the headaches? Should I get my eyes tested again? Could this be related to my iron?",
+    additional: "Bring my glasses and my student health card.",
+  };
+  db.prepare(`INSERT INTO preparation_notes (id, user_id, appointment_id, main_concern, onset, background, experiences, questions, additional)
+              VALUES (?,?,?,?,?,?,?,?,?)`)
+    .run(newId(), uid, gp, notes.main_concern, notes.onset, notes.background, notes.experiences, notes.questions, notes.additional);
+  const sections: ViewSections = {
+    reason: [point("Headaches most afternoons and tiredness despite sleeping 8 hours", "main_concern", "I keep getting headaches most afternoons and I feel tired even after sleeping 8 hours")],
+    timeline: [
+      point("Started about three weeks ago, around the start of exams", "onset", "Started about three weeks ago, around when semester exams began"),
+      point("Worse after long laptop study sessions; better on weekends", "experiences", "Headaches are worse after long study sessions on my laptop. Better on weekends"),
+      point("Coffee helps a little", "experiences", "Coffee helps a little"),
+    ],
+    background: [
+      point("Wears glasses for reading", "background", "I wear glasses for reading"),
+      point("Iron was a bit low when checked last year", "background", "I had my iron checked last year and it was a bit low"),
+    ],
+    questions: [
+      point("Could my screen time be causing the headaches?", "questions", "Could my screen time be causing the headaches?"),
+      point("Could this be related to my iron?", "questions", "Could this be related to my iron?"),
+      point("Should I get my eyes tested again?", "questions", "Should I get my eyes tested again?"),
+    ],
+    notes: [point("Bring glasses and student health card", "additional", "Bring my glasses and my student health card")],
+  };
+  saveBrief(gp, uid, sections, 0, "confirmed");
+
+  const text = "Blood test (FBC and iron studies) this week at any pathology collection centre.\nBook a review appointment with me in 2 weeks to go through results.\nTake iron supplement 1 tablet daily with food.\nStand up slowly and drink more water.\nCall the clinic soon if the dizziness gets worse.";
+  const instr = newId();
+  db.prepare("INSERT INTO visit_instructions (id, user_id, appointment_id, raw_text) VALUES (?,?,?,?)").run(instr, uid, past, text);
+  const task = db.prepare(`INSERT INTO follow_up_tasks (id, user_id, appointment_id, instruction_id, title, source_text, deadline, status, needs_clarification, clarification_reason)
+                           VALUES (?,?,?,?,?,?,?,?,?,?)`);
+  const med = "Medication wording is shown exactly as entered. Confirm any details with your healthcare professional or pharmacist.";
+  task.run(newId(), uid, past, instr, "Get blood test (FBC and iron studies)", "Blood test (FBC and iron studies) this week at any pathology collection centre.", "this week", "todo", 0, null);
+  task.run(newId(), uid, past, instr, "Book a review appointment", "Book a review appointment with me in 2 weeks to go through results.", "in 2 weeks", "completed", 0, null);
+  task.run(newId(), uid, past, instr, "Take iron supplement 1 tablet daily with food.", "Take iron supplement 1 tablet daily with food.", null, "in_progress", 1, med);
+  task.run(newId(), uid, past, instr, "Stand up slowly and drink more water", "Stand up slowly and drink more water.", null, "todo", 0, null);
+  task.run(newId(), uid, past, instr, "Call the clinic if dizziness gets worse", "Call the clinic soon if the dizziness gets worse.", null, "todo", 1, "\"Soon\" is unclear. Confirm with the clinic when you should call.");
+  return { gp, past, dental };
+}
+
+/** Removes expired demo accounts (cascades to everything they own). */
+export function purgeDemoAccounts() {
+  const cutoff = new Date(Date.now() - DEMO_TTL_HOURS * 3600_000).toISOString();
+  return db.prepare("DELETE FROM users WHERE email LIKE ? AND created_at < ?").run(`%@${DEMO_DOMAIN}`, cutoff).changes;
+}
+
+demoRouter.post("/", limiter, async (_req, res) => {
+  const id = newId();
+  const email = `visitor-${randomBytes(5).toString("hex")}@${DEMO_DOMAIN}`;
+  db.prepare("INSERT INTO users (id, email, name, password_hash) VALUES (?,?,?,?)")
+    .run(id, email, "Alex (demo)", await hashPassword(randomBytes(24).toString("hex")));
+  seedDemo(id);
+  const { token, expires } = createSession(id);
+  res.cookie(SESSION_COOKIE, token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", expires, path: "/" });
+  res.status(201).json({ user: { id, email, name: "Alex (demo)" } });
+});

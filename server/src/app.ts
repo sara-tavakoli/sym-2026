@@ -15,9 +15,12 @@ import { assistantRouter } from "./routes/assistant.js";
 import { draftsRouter } from "./routes/drafts.js";
 import { fitFinderRouter } from "./routes/fit-finder.js";
 import { ensureDemoDirectory } from "./providers/demo-data.js";
+import { demoRouter, purgeDemoAccounts } from "./demo.js";
 
 export function createApp() {
   ensureDemoDirectory();
+  purgeDemoAccounts();
+  setInterval(purgeDemoAccounts, 3600_000).unref();
   const app = express();
   app.disable("x-powered-by");
   // Behind one hosting proxy (Railway): use X-Forwarded-For for per-IP rate limits.
@@ -28,6 +31,7 @@ export function createApp() {
 
   app.get("/api/health", (_req, res) => res.json({ ok: true }));
   app.use("/api/auth", authRouter);
+  app.use("/api/demo", demoRouter);
   app.get("/api/ai/info", (_req, res) => res.json(aiInfo()));
   app.use("/api/appointments/:id", prepRouter);
   app.use("/api/appointments/:id", instructionsRouter);
