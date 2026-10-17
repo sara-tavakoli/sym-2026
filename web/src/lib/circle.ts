@@ -35,7 +35,7 @@ export function timeAgo(iso: string) {
   return new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short" });
 }
 
-export const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "?";
+export const initials = (name: string) => name.split(/\s+/).map((w) => w.replace(/[^\p{L}\p{N}]/gu, "")).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "?";
 
 // One shared request for the patient's helpers, so every TaskCard on a page can show the assign select.
 type Helper = { member_id: string; name: string };

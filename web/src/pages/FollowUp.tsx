@@ -20,7 +20,7 @@ export default function FollowUp() {
   const pages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
   return (
     <div className="stack fade-in">
-      <div className="page-head"><div><h1>Follow-Up Tracker</h1><p className="muted">Tasks from your healthcare professionals, and what you've already done.</p></div></div>
+      <div className="page-head"><div><h1>Follow-up tracker</h1><p className="muted">Tasks from your healthcare professionals, and what you've already done.</p></div></div>
 
       <div className="tabs" role="tablist" aria-label="Task status">
         {(["open", "completed"] as const).map((s) => (

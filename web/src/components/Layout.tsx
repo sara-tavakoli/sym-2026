@@ -9,7 +9,7 @@ const groups: { label: string | null; items: NavItem[] }[] = [
   { label: null, items: [{ to: "/app", label: "Dashboard", short: "Home", icon: "home", end: true }] },
   { label: "Your care", items: [
     { to: "/app/appointments", label: "Appointments", short: "Visits", icon: "calendar" },
-    { to: "/app/follow-up", label: "Follow-Up Tracker", short: "Tasks", icon: "check" },
+    { to: "/app/follow-up", label: "Follow-up tracker", short: "Tasks", icon: "check" },
     { to: "/app/circle", label: "Care circle", short: "Circle", icon: "people" },
   ] },
   { label: "Prepare and find", items: [

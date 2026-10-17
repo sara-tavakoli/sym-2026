@@ -79,7 +79,7 @@ export function NeedsAttention() {
   if (error || !data) return null; // the rest of the dashboard still works; this card is an extra
   if (!data.items.length) {
     return (
-      <section className="card attn attn-clear" aria-label="Needs attention">
+      <section className="panel attn attn-clear" aria-label="Needs attention">
         <span className="attn-ok" aria-hidden="true">✓</span>
         <div><b>Nothing needs your attention right now.</b> <span className="muted small">Overdue tasks, unprepared visits and missing after-visit notes will show up here.</span></div>
       </section>
@@ -89,8 +89,8 @@ export function NeedsAttention() {
   const urgent = data.counts.high;
 
   return (
-    <section className="card attn" aria-labelledby="attn-h">
-      <div className="card-head">
+    <section className="panel attn" aria-labelledby="attn-h">
+      <div className="panel-head">
         <h2 id="attn-h">Needs attention</h2>
         <span className={`badge ${urgent ? "danger" : "warn"}`}>{urgent ? `${urgent} urgent` : `${data.items.length} to review`}</span>
       </div>
@@ -99,8 +99,8 @@ export function NeedsAttention() {
           <li key={item.id} className={`attn-item sev-${item.severity}`}>
             <div className="attn-body">
               <span className={`badge ${TONE[item.severity]}`}>{KIND_LABEL[item.kind]}</span>
-              <div className="item-title">{item.title}</div>
-              <div className="item-sub">{item.detail}</div>
+              <div className="attn-title">{item.title}</div>
+              <div className="attn-detail">{item.detail}</div>
               {item.task && item.task.source_text !== "Added manually" && <div className="attn-src">From your instructions: <q>{item.task.source_text}</q></div>}
             </div>
             <div className="attn-actions">

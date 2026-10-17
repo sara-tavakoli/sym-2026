@@ -810,3 +810,47 @@ button.pref-chip.chip-link { cursor: pointer; padding: .3rem .8rem; }
 .ff-summary h2 { margin: 0; font-size: 1.1rem; }
 .ff-summary-text { font-size: .875rem; color: var(--muted); }
 .results-title { display: flex; justify-content: space-between; align-items: baseline; gap: .75rem; flex-wrap: wrap; }
+
+/* ---------- Legacy components, aligned with the redesign ----------
+   Features built before the redesign still use card / card-head / item / item-date / badge.
+   These rules make them read as the same system as panel / panel-head / rows / date-chip. */
+.card { padding: 1.15rem 1.3rem 1.2rem; }
+.card > h2:first-child, .card-head h2 { font-size: 1rem; font-weight: 650; }
+.card > h2:first-child { margin-bottom: .75rem; }
+.card-head { align-items: center; margin-bottom: .6rem; }
+.card-head .badge { font-variant-numeric: tabular-nums; }
+.detail-sections .card > h2:first-child, .detail-sections .card-head h2 { font-size: 1.15rem; }
+.card h3 { font-size: .95rem; }
+.badge { padding: .1rem .5rem; }
+.badge.danger { border-color: transparent; }
+.item { padding: .8rem 0; }
+.item-title { font-weight: 600; color: var(--text); }
+.item-date { width: 42px; height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0; border-radius: 9px; color: var(--primary-ink); line-height: 1; }
+.item-date b { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; margin-bottom: .1rem; }
+.item-date span { font-size: .66rem; font-weight: 600; letter-spacing: .05em; }
+.item select { min-height: 34px; font-size: .85rem; font-weight: 600; padding: 0 1.9rem 0 .6rem; border-radius: 8px; flex: none; }
+.item .item-sub { overflow-wrap: anywhere; }
+.alert.info { border-color: color-mix(in srgb, var(--accent) 18%, transparent); }
+.alert.warn { border-color: color-mix(in srgb, var(--warn) 20%, transparent); }
+.alert.error { border-color: color-mix(in srgb, var(--danger) 20%, transparent); }
+.alert a { color: inherit; font-weight: 600; }
+.avatar { font-weight: 700; color: var(--primary-ink); }
+h3.group-title { font-size: .76rem; font-weight: 600; }
+
+/* Radios (care circle roles) follow the checkbox styling. */
+input[type="radio"] { appearance: none; width: 19px; height: 19px; min-height: 19px; padding: 0; border: 1.5px solid var(--border-strong); border-radius: 50%; background: var(--surface); display: inline-grid; place-content: center; cursor: pointer; flex: none; transition: border-color .12s; }
+input[type="radio"]::after { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--primary); transform: scale(0); transition: transform .12s; }
+input[type="radio"]:checked { border-color: var(--primary); }
+input[type="radio"]:checked::after { transform: scale(1); }
+input[type="radio"]:hover:not(:checked) { border-color: var(--primary); }
+input[type="radio"]:focus-visible, input[type="checkbox"]:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.role-pick label { transition: border-color .12s, background .12s; }
+.role-pick label .small { display: block; margin-top: .1rem; line-height: 1.45; }
+
+/* Task rows: compact secondary controls on one line. */
+.task-actions { align-items: center; flex-wrap: wrap; gap: .35rem 1rem; }
+.text-btn { white-space: nowrap; }
+.assign-select { width: auto; min-height: 32px; max-width: 100%; padding: 0 1.9rem 0 .6rem; font-size: .85rem; font-weight: 600; border-radius: 8px; color: var(--muted); }
+.task-who { color: var(--text); font-weight: 500; }
+span.task-check { width: 0; }
+.task-list + .group-title { margin-top: 1rem; }

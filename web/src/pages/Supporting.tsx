@@ -76,27 +76,31 @@ function SupportTaskRow({ task, canEdit, ownerId, onChange }: { task: SupportTas
     finally { setBusy(false); }
   }
   return (
-    <div className={`task ${task.status === "completed" ? "done" : ""}`}>
-      <div className="task-top">
-        {canEdit && <input type="checkbox" style={{ width: 22, minHeight: 22, marginTop: 3 }} checked={task.status === "completed"} disabled={busy}
-          aria-label={`Mark "${task.title}" ${task.status === "completed" ? "not completed" : "completed"}`}
-          onChange={(e) => patch({ status: e.target.checked ? "completed" : "todo" })} />}
-        <div className="task-title">{task.title}</div>
-        {canEdit ? (
-          <select aria-label={`Status of "${task.title}"`} value={task.status} disabled={busy} onChange={(e) => patch({ status: e.target.value as TaskStatus })}>
-            {(Object.keys(STATUS_LABELS) as TaskStatus[]).map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
-          </select>
-        ) : <span className={`badge ${task.status === "completed" ? "ok" : ""}`}>{STATUS_LABELS[task.status]}</span>}
+    <li className={`task ${task.status === "completed" ? "done" : ""}`}>
+      {canEdit ? <input type="checkbox" className="task-check" checked={task.status === "completed"} disabled={busy}
+        aria-label={`Mark "${task.title}" ${task.status === "completed" ? "not completed" : "completed"}`}
+        onChange={(e) => patch({ status: e.target.checked ? "completed" : "todo" })} /> : <span className="task-check" aria-hidden="true" />}
+      <div className="task-body">
+        <p className="task-name">{task.title}</p>
+        <p className="task-meta">
+          <span>From {task.practitioner_name}</span>
+          {task.deadline && <span>Due: {task.deadline}</span>}
+          {task.assignee_name ? <span className="task-who">{mine ? "You're doing this" : `Assigned to ${task.assignee_name}`}</span> : null}
+        </p>
+        {task.needs_clarification ? <p className="task-flag">Needs confirming with their healthcare professional</p> : null}
+        {canEdit && (task.status !== "completed" && !task.assignee_user_id || mine) && (
+          <div className="task-actions">
+            {task.status !== "completed" && !task.assignee_user_id && <button className="btn sm" disabled={busy} onClick={() => patch({ assign: "me" })}>{busy && <Spinner />} I'll take this</button>}
+            {mine && <button className="btn sm ghost" disabled={busy} onClick={() => patch({ assign: "none" })}>Hand back</button>}
+          </div>
+        )}
       </div>
-      <div className="meta">
-        {task.deadline && <span className="badge info">Due: {task.deadline}</span>}
-        {task.needs_clarification ? <span className="badge warn">Needs confirming with their healthcare professional</span> : null}
-        {task.assignee_name ? <span className="badge ok">{mine ? "You're doing this" : `Assigned to ${task.assignee_name}`}</span> : null}
-        <span className="small muted">From {task.practitioner_name}</span>
-        {canEdit && task.status !== "completed" && !task.assignee_user_id && <button className="btn sm" disabled={busy} onClick={() => patch({ assign: "me" })}>{busy && <Spinner />} I'll take this</button>}
-        {canEdit && mine && <button className="btn sm ghost" disabled={busy} onClick={() => patch({ assign: "none" })}>Hand back</button>}
-      </div>
-    </div>
+      {canEdit ? (
+        <select className={`status-select status-${task.status}`} aria-label={`Status of "${task.title}"`} value={task.status} disabled={busy} onChange={(e) => patch({ status: e.target.value as TaskStatus })}>
+          {(Object.keys(STATUS_LABELS) as TaskStatus[]).map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+        </select>
+      ) : <span className={`status ${task.status === "completed" ? "status-ok" : task.status === "in_progress" ? "status-info" : "status-muted"}`}>{STATUS_LABELS[task.status]}</span>}
+    </li>
   );
 }
 
@@ -120,7 +124,7 @@ export function SupportingDetail() {
 
   return (
     <div className="stack fade-in">
-      <Link to="/app/supporting" className="small">← People I support</Link>
+      <Link to="/app/supporting" className="back-link">← People I support</Link>
       <div className="page-head">
         <div className="row" style={{ alignItems: "center" }}>
           <Avatar name={data.owner.name} />
@@ -156,9 +160,9 @@ export function SupportingDetail() {
           <div className="card-head"><h2 id="sup-tasks">Follow-up tasks</h2><span className="badge">{open.length} open</span></div>
           {!canEdit && <p className="small muted">You can see these tasks. Ask {first} to make you a Helper if you'd like to tick them off or take them on.</p>}
           {data.tasks.length === 0 && <div className="empty"><h3>No follow-up tasks</h3><p>Tasks {first} confirms after a visit will appear here.</p></div>}
-          {open.map((t) => <SupportTaskRow key={t.id} task={t} canEdit={canEdit} ownerId={ownerId} onChange={() => load()} />)}
-          {done.length > 0 && <h3 style={{ marginTop: "1rem" }}>Completed</h3>}
-          {done.map((t) => <SupportTaskRow key={t.id} task={t} canEdit={canEdit} ownerId={ownerId} onChange={() => load()} />)}
+          {open.length > 0 && <ul className="task-list">{open.map((t) => <SupportTaskRow key={t.id} task={t} canEdit={canEdit} ownerId={ownerId} onChange={() => load()} />)}</ul>}
+          {done.length > 0 && <h3 className="group-title">Completed</h3>}
+          {done.length > 0 && <ul className="task-list">{done.map((t) => <SupportTaskRow key={t.id} task={t} canEdit={canEdit} ownerId={ownerId} onChange={() => load()} />)}</ul>}
         </section>
         <div className="stack">
           <section className="card" aria-labelledby="sup-act">
