@@ -28,6 +28,8 @@ test("sore ankle after a fall suggests a physiotherapist, with a GP alternative 
   assert.match(s.reason, /“ankle”.*“fall”.*physiotherapists often see this; a GP can also help/);
   assert.ok(s.alternatives.some((a) => a.category === "gp"));
   assert.equal(s.mode, "in_person");
+  assert.equal(s.headline, "People with similar concerns often start with a physiotherapist");
+  assert.match(suggest({ concern: "blurry vision" }, CATS).headline, /an optometrist$/);
 });
 
 test("common pathways map to existing Fit Finder categories", () => {

@@ -92,6 +92,12 @@ export interface Suggestion {
   alternatives: { id: string; label: string; category: string | null; reason: string }[];
 }
 
+/** "Physiotherapist" -> "a physiotherapist", "Optometrist" -> "an optometrist", "GP ..." stays "a GP ...". */
+export const withArticle = (label: string) => {
+  const noun = label.replace(/^([A-Z])(?=[a-z])/, (c) => c.toLowerCase());
+  return `${/^[aeiou]/.test(noun) ? "an" : "a"} ${noun}`;
+};
+
 const quote = (words: string[]) => words.slice(0, 3).map((w) => `“${w.toLowerCase()}”`).join(", ");
 
 export function suggest(input: SuggestInput, categories: string[]): Suggestion {
@@ -122,7 +128,7 @@ export function suggest(input: SuggestInput, categories: string[]): Suggestion {
   return {
     id: primary.id, label: primary.label, category: primary.category,
     mode: primary.id === TELEHEALTH_GP.id ? "telehealth" : mode,
-    headline: `People with similar concerns often start with a ${primary.label}`,
+    headline: `People with similar concerns often start with ${withArticle(primary.label)}`,
     reason, notes, alternatives,
   };
 }
