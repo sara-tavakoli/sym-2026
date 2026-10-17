@@ -42,6 +42,7 @@ export default function Dashboard() {
         <div className="row">
           <Link className="btn primary" to="/app/appointments?new=1">New appointment</Link>
           <Link className="btn" to="/app/preparation">Prepare a brief</Link>
+          <Link className="btn" to="/app/fit-finder">Find a provider</Link>
           <Link className="btn" to="/app/follow-up">Add visit notes</Link>
         </div>
       </div>

@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { Link } from "react-router-dom";
-import { api, ApiError, type AssistantReply, type ChatMessage } from "../lib/api";
+import { Link, useNavigate } from "react-router-dom";
+import { api, ApiError, type AssistantReply, type ChatMessage, type Draft } from "../lib/api";
+import { SearchSummary } from "./fit";
+import { Spinner } from "./ui";
 import { useApp } from "../lib/app-context";
 
 const EXAMPLES = [
   "I have an appointment coming up and want help organising what to discuss",
   "What should I bring to my first GP appointment in Australia?",
   "I got instructions after my visit and want to keep track of them",
-  "I'm looking for a bulk-billing GP near Macquarie Park",
+  "I need a dentist around Sydney who offers Saturday appointments",
 ];
 const MAX_LEN = 2000;
 const HISTORY = 20; // most recent messages sent as context
@@ -36,7 +38,9 @@ function Text({ content }: { content: string }) {
 }
 
 export function Assistant({ variant = "panel" }: { variant?: "panel" | "page" }) {
-  const { chat, setChat } = useApp();
+  const { chat, setChat, notify } = useApp();
+  const nav = useNavigate();
+  const [briefing, setBriefing] = useState(false);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -54,13 +58,25 @@ export function Assistant({ variant = "panel" }: { variant?: "panel" | "page" })
       const r = await api.post<AssistantReply>("/assistant/chat", {
         messages: next.slice(-HISTORY).map(({ role, content }) => ({ role, content })),
       });
-      setChat([...next, { role: "assistant", content: r.reply, actions: r.actions, safety: r.safety }]);
+      setChat([...next, { role: "assistant", content: r.reply, actions: r.actions, safety: r.safety, search: r.search }]);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Something went wrong. Please try again.");
     } finally {
       setBusy(false);
       inputRef.current?.focus();
     }
+  }
+
+  // Turns the user's own messages into a draft brief (server keeps only verified excerpts, not the chat).
+  async function createBrief() {
+    setBriefing(true); setError("");
+    try {
+      const d = await api.post<Draft>("/drafts/from-chat", { messages: chat.slice(-30).map(({ role, content }) => ({ role, content })) });
+      notify("Draft brief created from your conversation");
+      nav(`/app/drafts/${d.id}`);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Couldn't create the brief. Please try again.");
+    } finally { setBriefing(false); }
   }
 
   // Retry re-sends the last user message that didn't get a reply.
@@ -91,9 +107,9 @@ export function Assistant({ variant = "panel" }: { variant?: "panel" | "page" })
           <div>
             <strong className="can">Can help you</strong>
             <ul>
-              <li>Organise your concerns and questions before an appointment</li>
-              <li>Explain how to use CarePath's preparation and follow-up tools</li>
-              <li>Point you to the right CarePath page or official resources</li>
+              <li>Organise your concerns and questions, then turn your own words into a draft brief</li>
+              <li>Turn what you're looking for into Fit Finder search preferences you can check and edit</li>
+              <li>Explain CarePath and point you to official resources</li>
             </ul>
           </div>
           <div>
@@ -101,7 +117,7 @@ export function Assistant({ variant = "panel" }: { variant?: "panel" | "page" })
             <ul>
               <li>Diagnose, explain symptoms or judge urgency</li>
               <li>Recommend medicines, tests or treatments</li>
-              <li>Book appointments or search providers (provider search is coming soon)</li>
+              <li>Book appointments, show real availability, or say which provider is medically best</li>
             </ul>
           </div>
         </div>
@@ -128,12 +144,14 @@ export function Assistant({ variant = "panel" }: { variant?: "panel" | "page" })
               {m.actions && m.actions.length > 0 && (
                 <div className="msg-actions">
                   {m.actions.map((a) =>
-                    a.kind === "internal" ? <Link key={a.href} className="btn sm" to={a.href}>{a.label}</Link>
+                    a.kind === "create_brief" ? <button key="create_brief" className="btn sm primary" onClick={createBrief} disabled={briefing || busy}>{briefing && <Spinner />} {a.label}</button>
+                    : a.kind === "internal" ? <Link key={a.href} className="btn sm" to={a.href}>{a.label}</Link>
                     : a.kind === "phone" ? <a key={a.href} className="btn sm danger solid" href={a.href}>{a.label}</a>
                     : <a key={a.href} className="btn sm" href={a.href} target="_blank" rel="noreferrer">{a.label} <span aria-hidden="true">↗</span><span className="sr-only">(opens in a new tab)</span></a>
                   )}
                 </div>
               )}
+              {m.search && <SearchSummary extracted={m.search} />}
             </div>
           </div>
         ))}

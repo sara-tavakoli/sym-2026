@@ -45,6 +45,7 @@ test("sends structured-output request with system prompt, JSON schema, model and
   assert.deepEqual((c.config.responseJsonSchema as { required: string[] }).required, ["reason", "timeline", "background", "questions", "notes"]);
   assert.ok(c.config.abortSignal instanceof AbortSignal);
   assert.equal(c.config.temperature, 0.1);
+  assert.deepEqual(c.config.thinkingConfig, { thinkingLevel: "LOW" });
 });
 
 test("Gemini brief output still passes through source verification and safety filters", async () => {
@@ -109,6 +110,12 @@ test("SDK errors map to clean HTTP statuses", async () => {
     setAiClient(createGeminiClient(fakeModels([err]).models));
     await assert.rejects(generate(req, v), (e: InstanceType<typeof AiError>) => e instanceof AiError && e.status === status, `expected ${status}`);
   }
+});
+
+test("an exhausted daily quota is reported as such, not as 'try again in a minute'", async () => {
+  const quota = new ApiError({ message: '{"error":{"code":429,"details":[{"quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier"}]}}', status: 429 });
+  setAiClient(createGeminiClient(fakeModels([quota]).models));
+  await assert.rejects(generate(req, v), (e: InstanceType<typeof AiError>) => e.status === 429 && /daily usage limit/.test(e.message));
 });
 
 test("requests that exceed AI_TIMEOUT_MS are aborted and return 504", async () => {

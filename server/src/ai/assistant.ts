@@ -1,15 +1,17 @@
 import { z } from "zod";
 import { generate } from "./client.js";
+import { PREF_ITEMS_SCHEMA, PREFERENCE_RULES, prefItem } from "./preferences.js";
 
 export const INTENTS = ["prepare", "find_provider", "follow_up", "symptom_question", "emergency", "general", "out_of_scope"] as const;
 export type Intent = (typeof INTENTS)[number];
 export interface ChatMessage { role: "user" | "assistant"; content: string }
 
-const output = z.object({ reply: z.string().min(1).max(1500), intent: z.enum(INTENTS) });
+const output = z.object({ reply: z.string().min(1).max(1500), intent: z.enum(INTENTS), preferences: z.array(prefItem).max(30).optional().default([]) });
+// One call returns the reply, the intent and (for provider requests) search preferences, to save latency and quota.
 const SCHEMA = {
   type: "object",
-  properties: { reply: { type: "string" }, intent: { type: "string", enum: [...INTENTS] } },
-  required: ["reply", "intent"],
+  properties: { reply: { type: "string" }, intent: { type: "string", enum: [...INTENTS] }, preferences: PREF_ITEMS_SCHEMA },
+  required: ["reply", "intent", "preferences"],
 };
 
 const SYSTEM = `You are the CarePath AI Assistant inside CarePath, an Australian app that helps people organise healthcare appointments. You are NOT a clinician and CarePath is not a medical service.
@@ -34,12 +36,26 @@ Hard rules:
 
 Style: warm, plain Australian English, short (under 120 words), plain text only (no markdown headings, no bold; simple "- " bullets are OK).
 
+When intent is "find_provider", also fill "preferences" from the user's messages in this conversation (otherwise return an empty array).
+${PREFERENCE_RULES}
+
 Intent values: "prepare" (getting ready for an appointment), "find_provider" (looking for a clinic/practitioner/service), "follow_up" (instructions or tasks after a visit), "symptom_question", "emergency", "general" (questions about CarePath or healthcare admin), "out_of_scope" (unrelated).`;
 
 // Deterministic safety layers around the model.
 const EMERGENCY = /\b(chest pain|can'?t breathe|cannot breathe|difficulty breathing|struggling to breathe|not breathing|unconscious|passed out|severe bleeding|bleeding heavily|stroke|face (is )?drooping|overdos\w*|anaphyla\w*|seizure|suicid\w*|kill (my|him|her)self|end (my|it all|my life)|self[- ]harm|hurt(ing)? myself)\b/i;
 const SELF_HARM = /\b(suicid\w*|kill (my|him|her)self|end (my|it all|my life)|self[- ]harm|hurt(ing)? myself)\b/i;
-const CLINICAL_REPLY = /\b(you (probably|likely|might|may|could) have|(sounds|seems|looks) like (you have|it'?s|a|an)\b|(could|might|may) be (a sign of|a symptom of|caused by|due to)|is (usually|often|commonly) caused by|i (would )?(recommend|suggest) (taking|you take|using|trying)|you should (take|try|use|start|stop)|\d+\s?(mg|mcg|ml)\b|(your|the) diagnosis is|diagnosed with)\b/i;
+// "Sounds like …" is only clinical when it names a condition ("sounds like a migraine"), not in ordinary
+// conversation ("sounds like you have a clear idea"), so that branch requires a medical term.
+const CONDITION = "(infection|virus|viral|bacterial|flu|influenza|cold|migraine|condition|disorder|syndrome|disease|deficiency|allergy|allergic|anxiety|depression|insomnia|injury|sprain|strain|fracture|inflammation|cancer|tumou?r|diabetes|asthma|reflux|ulcer|concussion|burnout|stress|headaches?)";
+const CLINICAL_REPLY = new RegExp(
+  String.raw`\b(you (probably|likely|might|may|could) have` +
+  String.raw`|(sounds|seems|looks) like (you (have|'ve got|might have|may have) |it'?s |it (could|might|may) be )?(an? )?([\w-]+ ){0,3}` + CONDITION +
+  String.raw`|(could|might|may) be (a sign of|a symptom of|caused by|due to)|is (usually|often|commonly) caused by` +
+  String.raw`|i('d| would)? (recommend|suggest) (taking|you take|using|trying)|you should (take|try|use|start|stop)` +
+  String.raw`|\d+\s?(mg|mcg|ml)\b|(your|the) diagnosis is|diagnosed with)\b`,
+  "i",
+);
+export const isClinicalReply = (text: string) => CLINICAL_REPLY.test(text);
 
 export const EMERGENCY_REPLY =
   "If you or someone else is in danger or this could be an emergency, call 000 now (Triple Zero). I can't assess symptoms or urgency. If it's not an emergency, the Healthdirect helpline (1800 022 222) can give advice 24/7.";
@@ -48,12 +64,12 @@ export const SELF_HARM_REPLY =
 export const SAFE_FALLBACK =
   "I can't help with what might be causing symptoms or what to take — that needs a healthcare professional. For symptom advice, try the Healthdirect Symptom Checker or call 1800 022 222. If you'd like, I can help you organise your concerns and questions for your appointment.";
 
-export interface AssistantResult { reply: string; intent: Intent; safety: "emergency" | "filtered" | null; selfHarm: boolean }
+export interface AssistantResult { reply: string; intent: Intent; safety: "emergency" | "filtered" | null; selfHarm: boolean; preferences: z.infer<typeof prefItem>[] }
 
 export function screenEmergency(text: string): AssistantResult | null {
   if (!EMERGENCY.test(text)) return null;
   const selfHarm = SELF_HARM.test(text);
-  return { reply: selfHarm ? SELF_HARM_REPLY : EMERGENCY_REPLY, intent: "emergency", safety: "emergency", selfHarm };
+  return { reply: selfHarm ? SELF_HARM_REPLY : EMERGENCY_REPLY, intent: "emergency", safety: "emergency", selfHarm, preferences: [] };
 }
 
 export function buildPrompt(messages: ChatMessage[], appointments: { practitioner_name: string; service_type: string; starts_at: string }[]): string {
@@ -72,8 +88,8 @@ export async function assistantReply(messages: ChatMessage[], appointments: Para
 
   const out = await generate({ system: SYSTEM, user: buildPrompt(messages, appointments), schema: SCHEMA }, output);
   // 2. Model-flagged emergencies also get the fixed wording.
-  if (out.intent === "emergency") return { reply: EMERGENCY_REPLY, intent: "emergency", safety: "emergency", selfHarm: false };
+  if (out.intent === "emergency") return { reply: EMERGENCY_REPLY, intent: "emergency", safety: "emergency", selfHarm: false, preferences: [] };
   // 3. Replies containing diagnostic / dosing language are replaced, never shown.
-  if (CLINICAL_REPLY.test(out.reply)) return { reply: SAFE_FALLBACK, intent: "symptom_question", safety: "filtered", selfHarm: false };
-  return { reply: out.reply.trim(), intent: out.intent, safety: null, selfHarm: false };
+  if (CLINICAL_REPLY.test(out.reply)) return { reply: SAFE_FALLBACK, intent: "symptom_question", safety: "filtered", selfHarm: false, preferences: [] };
+  return { reply: out.reply.trim(), intent: out.intent, safety: null, selfHarm: false, preferences: out.intent === "find_provider" ? out.preferences : [] };
 }

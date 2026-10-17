@@ -5,7 +5,7 @@ import { requireAuth } from "../auth.js";
 import { chatLimiter } from "../ai/limit.js";
 import { AiError } from "../ai/client.js";
 import { assistantReply, type Intent } from "../ai/assistant.js";
-import { extractPreferences, type ExtractedPrefs } from "../ai/preferences.js";
+import { verifyPreferences, type ExtractedPrefs } from "../ai/preferences.js";
 import { directory } from "../providers/directory.js";
 
 export const assistantRouter = Router();
@@ -59,14 +59,12 @@ assistantRouter.post("/chat", chatLimiter, async (req, res) => {
     // Offer a brief once the user has shared details (a follow-up message or one substantial message),
     // not on the opening request alone. The server still refuses if nothing usable was said.
     const canBrief = r.intent === "prepare" && (userText.length >= 2 || userText.join(" ").length >= 120);
-    // For provider requests, read preferences from the user's recent messages (verified server-side).
+    // Provider requests: the model's proposed preferences are kept only if quoted from the user's own recent messages.
     let search: (ExtractedPrefs & { location_known: boolean | null; location_resolved: string | null }) | null = null;
     if (r.intent === "find_provider") {
-      try {
-        const ex = await extractPreferences(userText.slice(-2).join("\n"));
-        const loc = ex.prefs.location ? directory.resolveLocation(ex.prefs.location) : null;
-        search = { ...ex, location_known: ex.prefs.location ? !!loc : null, location_resolved: loc ? `${loc.suburb} ${loc.state} ${loc.postcode}` : null };
-      } catch { search = null; /* the reply still works; the user can search manually */ }
+      const ex = verifyPreferences({ items: r.preferences }, userText.slice(-3).join("\n"));
+      const loc = ex.prefs.location ? directory.resolveLocation(ex.prefs.location) : null;
+      search = { ...ex, location_known: ex.prefs.location ? !!loc : null, location_resolved: loc ? `${loc.suburb} ${loc.state} ${loc.postcode}` : null };
     }
     res.json({ reply: r.reply, intent: r.intent, safety: r.safety, actions: actionsFor(r.intent, r.selfHarm, appts, canBrief), search });
   } catch (e) {

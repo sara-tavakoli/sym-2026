@@ -99,7 +99,9 @@ const notesBody = z.object({
 draftsRouter.put("/:id/notes", (req, res) => {
   if (!load(req)) return notFound(res);
   const b = notesBody.parse(req.body);
-  save(did(req), req.user!.id, { title: b.title, notes: b.notes as PrepInput });
+  // Untitled drafts take their title from the main concern so they're recognisable in the list.
+  const title = !b.title || b.title === "Draft appointment brief" ? titleFrom(b.notes as PrepInput) : b.title;
+  save(did(req), req.user!.id, { title, notes: b.notes as PrepInput });
   res.json(view(load(req)!));
 });
 

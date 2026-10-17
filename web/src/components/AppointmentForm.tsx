@@ -4,7 +4,11 @@ import { Field, Modal, Spinner } from "./ui";
 
 const SERVICES = ["General Practitioner (GP)", "Dentist", "Physiotherapy", "Psychology / Counselling", "Optometry", "Dermatology", "Specialist", "Pathology / Imaging", "Other"];
 
-export function AppointmentForm({ existing, onSaved, onClose }: { existing?: Appointment; onSaved: (a: Appointment) => void; onClose: () => void }) {
+type Seed = Partial<Pick<Appointment, "practitioner_name" | "service_type" | "clinic_name" | "location" | "purpose">>;
+
+export function AppointmentForm({ existing, initial, onSaved, onClose }: { existing?: Appointment; initial?: Seed; onSaved: (a: Appointment) => void; onClose: () => void }) {
+  // Prefill (e.g. from a Fit Finder result) when creating; editing always uses the stored record.
+  const seed: Seed | undefined = existing ?? initial;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -43,22 +47,22 @@ export function AppointmentForm({ existing, onSaved, onClose }: { existing?: App
             <input name="when" type="datetime-local" required defaultValue={existing ? toLocalInput(existing.starts_at) : ""} aria-invalid={!!fieldErrors.when} />
           </Field>
           <Field label="Practitioner name *" error={fieldErrors.practitioner_name}>
-            <input name="practitioner_name" required maxLength={120} placeholder="e.g. Dr Example" defaultValue={existing?.practitioner_name} aria-invalid={!!fieldErrors.practitioner_name} />
+            <input name="practitioner_name" required maxLength={120} placeholder="e.g. Dr Example" defaultValue={seed?.practitioner_name} aria-invalid={!!fieldErrors.practitioner_name} />
           </Field>
           <Field label="Service type *" error={fieldErrors.service_type}>
-            <select name="service_type" required defaultValue={existing?.service_type ?? SERVICES[0]}>
-              {existing && !SERVICES.includes(existing.service_type) && <option>{existing.service_type}</option>}
+            <select name="service_type" required defaultValue={seed?.service_type ?? SERVICES[0]}>
+              {seed?.service_type && !SERVICES.includes(seed.service_type) && <option>{seed.service_type}</option>}
               {SERVICES.map((s) => <option key={s}>{s}</option>)}
             </select>
           </Field>
           <Field label="Clinic name *" error={fieldErrors.clinic_name}>
-            <input name="clinic_name" required maxLength={120} placeholder="e.g. Campus Health Clinic" defaultValue={existing?.clinic_name} aria-invalid={!!fieldErrors.clinic_name} />
+            <input name="clinic_name" required maxLength={120} placeholder="e.g. Campus Health Clinic" defaultValue={seed?.clinic_name} aria-invalid={!!fieldErrors.clinic_name} />
           </Field>
           <Field label="Location (optional)">
-            <input name="location" maxLength={200} placeholder="Address or suburb" defaultValue={existing?.location ?? ""} />
+            <input name="location" maxLength={200} placeholder="Address or suburb" defaultValue={seed?.location ?? ""} />
           </Field>
           <Field label="Purpose (optional)" hint="A short reason, e.g. “Routine check-up”" full>
-            <input name="purpose" maxLength={500} defaultValue={existing?.purpose ?? ""} />
+            <input name="purpose" maxLength={500} defaultValue={seed?.purpose ?? ""} />
           </Field>
         </div>
         <div className="row" style={{ justifyContent: "flex-end" }}>

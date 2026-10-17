@@ -7,6 +7,7 @@ const links = [
   { to: "/app/appointments", label: "Appointments", short: "Visits", icon: "calendar" },
   { to: "/app/assistant", label: "AI Assistant", short: "Assistant", icon: "chat" },
   { to: "/app/preparation", label: "AI Preparation", short: "Prepare", icon: "sparkle" },
+  { to: "/app/fit-finder", label: "Fit Finder", short: "Find", icon: "search" },
   { to: "/app/follow-up", label: "Follow-Up Tracker", short: "Tasks", icon: "check" },
   { to: "/app/settings", label: "Settings", short: "Settings", icon: "gear" },
 ] as const;
@@ -46,7 +47,7 @@ export function Layout() {
         </div>
       </div>
       <nav className="bottomnav" aria-label="Main mobile">
-        {links.filter((l) => l.to !== "/app/settings").map((l) => (
+        {links.filter((l) => l.to !== "/app/settings" && l.to !== "/app/preparation").map((l) => (
           <NavLink key={l.to} to={l.to} end={"end" in l && l.end}><Icon name={l.icon} />{l.short}</NavLink>
         ))}
       </nav>
