@@ -1,0 +1,40 @@
+/* ---------- Needs attention (dashboard nudges) ---------- */
+.attn { position: relative; overflow: hidden; }
+.attn::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; background: linear-gradient(90deg, var(--danger), var(--warn)); }
+.attn-list { list-style: none; margin: 0; padding: 0; }
+.attn-item { display: flex; gap: 1rem; align-items: flex-start; padding: .85rem 1rem; border: 1px solid var(--border); border-left: 4px solid var(--border); border-radius: 12px; background: var(--surface); }
+.attn-item + .attn-item { margin-top: .6rem; }
+.attn-item.sev-high { border-left-color: var(--danger); background: color-mix(in srgb, var(--danger-soft) 40%, var(--surface)); }
+.attn-item.sev-medium { border-left-color: var(--warn); }
+.attn-item.sev-low { border-left-color: var(--accent); }
+.attn-body { flex: 1; min-width: 0; }
+.attn-body .badge { margin-bottom: .3rem; }
+.attn-body .item-title { overflow-wrap: anywhere; }
+.attn-src { font-size: .85rem; color: var(--muted); margin-top: .4rem; border-left: 3px solid var(--border); padding-left: .6rem; overflow-wrap: anywhere; }
+.attn-actions { display: flex; flex-direction: column; align-items: stretch; gap: .4rem; flex: none; max-width: 46%; }
+.attn-actions .btn { white-space: nowrap; }
+.attn-more { margin-top: .5rem; }
+.attn-clear { display: flex; align-items: center; gap: .75rem; padding: .85rem 1.1rem; }
+.attn-clear::before { display: none; }
+.attn-ok { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--ok-soft); color: var(--ok); font-weight: 800; }
+@media (max-width: 600px) {
+  .attn-item { flex-direction: column; gap: .6rem; padding: .8rem .85rem; }
+  .attn-actions { flex-direction: row; flex-wrap: wrap; max-width: none; width: 100%; }
+  .attn-actions .btn { flex: 1 1 auto; white-space: normal; }
+}
+
+/* ---------- Import from a booking confirmation ---------- */
+.import-panel { border: 1px dashed var(--border); border-radius: 12px; background: var(--surface-2); padding: 0 1rem; margin-bottom: 1rem; }
+.import-panel[open] { padding-bottom: 1rem; }
+.import-panel > summary { cursor: pointer; font-weight: 700; min-height: 44px; display: flex; align-items: center; gap: .5rem; list-style: none; border-radius: 10px; }
+.import-panel > summary::-webkit-details-marker { display: none; }
+.import-panel > summary::before { content: "+"; width: 22px; height: 22px; flex: none; display: grid; place-items: center; border-radius: 6px; background: var(--primary-soft); color: var(--primary); font-weight: 800; }
+.import-panel[open] > summary::before { content: "−"; }
+.import-panel textarea { background: var(--surface); }
+.import-samples { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: .25rem 0 .75rem; }
+.import-row { display: flex; gap: 1rem; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; margin-top: .75rem; }
+.import-file { display: flex; flex-direction: column; gap: .25rem; min-width: 0; flex: 1 1 220px; }
+.import-file label { margin: 0; }
+.import-file input[type="file"] { min-height: auto; padding: .4rem; background: var(--surface); }
+.modal .field .hint { overflow-wrap: anywhere; }
+@media (max-width: 600px) { .import-row .btn { width: 100%; } }

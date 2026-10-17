@@ -14,7 +14,7 @@ tasksRouter.use(requireAuth);
 
 const pid = (req: Request) => (req.params as Record<string, string>).id;
 const norm = (s: string) => s.toLowerCase().replace(/[\s ]+/g, " ").trim();
-const TASK_COLS = "id, appointment_id, instruction_id, title, source_text, deadline, status, needs_clarification, clarification_reason, notes, created_at, updated_at";
+const TASK_COLS = "id, appointment_id, instruction_id, title, source_text, deadline, due_date, status, needs_clarification, clarification_reason, notes, created_at, updated_at";
 
 function ownsAppointment(req: Request, res: Response): boolean {
   const row = db.prepare("SELECT 1 FROM appointments WHERE id = ? AND user_id = ?").get(pid(req), req.user!.id);

@@ -4,6 +4,7 @@ import { api, fmtDateTime, type DashboardData } from "../lib/api";
 import { useApp } from "../lib/app-context";
 import { PrepBadge, Skeletons } from "../components/ui";
 import { Assistant } from "../components/Assistant";
+import { NeedsAttention } from "../components/NeedsAttention";
 
 type Appt = DashboardData["upcoming"][number];
 
@@ -45,6 +46,8 @@ export default function Dashboard() {
           <Link className="btn" to="/app/follow-up">Add visit notes</Link>
         </div>
       </div>
+
+      <NeedsAttention />
 
       <Assistant variant="panel" />
 

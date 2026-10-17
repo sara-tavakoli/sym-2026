@@ -15,7 +15,8 @@ export default function Appointments() {
   const [page, setPage] = useState(1);
   const [data, setData] = useState<Page<Appointment> | null>(null);
   const [error, setError] = useState("");
-  const [creating, setCreating] = useState(params.get("new") === "1");
+  const [creating, setCreating] = useState(params.get("new") === "1" || params.get("import") === "1");
+  const [importing, setImporting] = useState(params.get("import") === "1");
 
   const load = useCallback(() => {
     setError("");
@@ -24,13 +25,16 @@ export default function Appointments() {
   useEffect(() => { setData(null); load(); }, [load]);
 
   const pages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
-  const closeForm = () => { setCreating(false); if (params.has("new")) { params.delete("new"); setParams(params, { replace: true }); } };
+  const closeForm = () => { setCreating(false); setImporting(false); if (params.has("new") || params.has("import")) { params.delete("new"); params.delete("import"); setParams(params, { replace: true }); } };
 
   return (
     <div className="fade-in">
       <div className="page-head">
         <div><h1>Appointments</h1><p className="muted">Your own records of appointments. Nothing here is booked with a provider.</p></div>
-        <button className="btn primary" onClick={() => setCreating(true)}>New appointment</button>
+        <div className="row">
+          <button className="btn" onClick={() => { setImporting(true); setCreating(true); }}>Import booking confirmation</button>
+          <button className="btn primary" onClick={() => setCreating(true)}>New appointment</button>
+        </div>
       </div>
 
       <div className="tabs" role="tablist" aria-label="Appointment scope">
@@ -76,7 +80,7 @@ export default function Appointments() {
         )}
       </div>
 
-      {creating && <AppointmentForm onClose={closeForm} onSaved={() => { closeForm(); notify("Appointment created"); load(); }} />}
+      {creating && <AppointmentForm startWithImport={importing} onClose={closeForm} onSaved={() => { closeForm(); notify("Appointment created"); load(); }} />}
     </div>
   );
 }

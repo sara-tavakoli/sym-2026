@@ -5,6 +5,7 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { ZodError } from "zod";
 import "./db.js";
+import "./schema-nudges.js";
 import { authRouter } from "./routes/auth.js";
 import { appointmentsRouter } from "./routes/appointments.js";
 import { dashboardRouter } from "./routes/dashboard.js";
@@ -15,6 +16,8 @@ import { assistantRouter } from "./routes/assistant.js";
 import { draftsRouter } from "./routes/drafts.js";
 import { fitFinderRouter } from "./routes/fit-finder.js";
 import { ensureDemoDirectory } from "./providers/demo-data.js";
+import { importRouter } from "./routes/import.js";
+import { attentionRouter } from "./routes/attention.js";
 
 export function createApp() {
   ensureDemoDirectory();
@@ -27,6 +30,7 @@ export function createApp() {
   app.get("/api/health", (_req, res) => res.json({ ok: true }));
   app.use("/api/auth", authRouter);
   app.get("/api/ai/info", (_req, res) => res.json(aiInfo()));
+  app.use("/api/appointments/import", importRouter); // must precede the /:id routers
   app.use("/api/appointments/:id", prepRouter);
   app.use("/api/appointments/:id", instructionsRouter);
   app.use("/api/appointments", appointmentsRouter);
@@ -34,6 +38,7 @@ export function createApp() {
   app.use("/api/assistant", assistantRouter);
   app.use("/api/drafts", draftsRouter);
   app.use("/api/fit-finder", fitFinderRouter);
+  app.use("/api/dashboard/attention", attentionRouter);
   app.use("/api/dashboard", dashboardRouter);
   app.use("/api", (_req, res) => res.status(404).json({ error: "Not found" }));
 

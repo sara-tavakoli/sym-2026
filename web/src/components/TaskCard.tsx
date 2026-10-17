@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError, STATUS_LABELS, type Task, type TaskStatus } from "../lib/api";
 import { useApp } from "../lib/app-context";
+import { dueInfo } from "../lib/due";
 
 export function TaskCard({ task, onChange, onDelete, showAppointment }: { task: Task; onChange: (t: Task) => void; onDelete: (id: string) => void; showAppointment?: boolean }) {
   const { notify } = useApp();
@@ -9,6 +10,7 @@ export function TaskCard({ task, onChange, onDelete, showAppointment }: { task: 
   const [title, setTitle] = useState(task.title);
   const [deadline, setDeadline] = useState(task.deadline ?? "");
   const [notes, setNotes] = useState(task.notes ?? "");
+  const due = dueInfo(task.due_date, task.status === "completed");
 
   async function patch(body: Partial<Pick<Task, "title" | "notes" | "deadline" | "status">>) {
     try { onChange(await api.patch<Task>(`/tasks/${task.id}`, body)); return true; }
@@ -41,7 +43,9 @@ export function TaskCard({ task, onChange, onDelete, showAppointment }: { task: 
       </div>
       {task.source_text !== "Added manually" && <div className="src">From your instructions: <q>{task.source_text}</q></div>}
       <div className="meta">
-        {task.deadline && !editing && <span className="badge info">Due: {task.deadline}</span>}
+        {task.deadline && !editing && (due
+          ? <><span className={`badge ${due.tone}`}>{due.label}</span><span className="small muted">“{task.deadline}”</span></>
+          : <span className="badge info">Due: {task.deadline}</span>)}
         {task.needs_clarification ? <span className="badge warn" title={task.clarification_reason ?? ""}>Confirm with your healthcare professional</span> : null}
         {showAppointment && task.practitioner_name && <Link className="small" to={`/app/appointments/${task.appointment_id}`}>{task.practitioner_name}</Link>}
         {!editing && <button className="btn sm ghost" onClick={() => setEditing(true)}>Edit</button>}
