@@ -11,7 +11,19 @@ const icons = {
   info: "M12 8h.01M11 12h1v5h1M12 21a9 9 0 100-18 9 9 0 000 18z",
   arrow: "M5 12h14M13 6l6 6-6 6",
   check: "M5 12.5l4.5 4.5L19 7",
+  share: "M8 12h8M14 8l4 4-4 4M4 5v14",
+  people: "M9 11a3 3 0 100-6 3 3 0 000 6zM3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5.5a3 3 0 010 5.5M18 14c2 .7 3 2.6 3 6",
 };
+
+// Verified against the sources; caveats and exact wording are in docs/EVIDENCE.md.
+const STATS = [
+  { stat: "40–80%", label: "of medical information is forgotten by patients immediately", source: "Kessels, J R Soc Med 2003", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC539473/" },
+  { stat: "4 in 35", label: "GP patients voiced everything they came to discuss", source: "Barry et al., BMJ 2000", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC27368/" },
+  { stat: "11 sec", label: "median time before a patient's opening concern was interrupted", source: "Singh Ospina et al., JGIM 2019", url: "https://pubmed.ncbi.nlm.nih.gov/29968051/" },
+  { stat: "up to 62%", label: "of lab tests were not followed up, in some ambulatory care studies", source: "Callen et al., JGIM 2012", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC3445672/" },
+  { stat: "3.0 million", label: "unpaid carers in Australia, many helping with appointments", source: "ABS SDAC 2022", url: "https://www.abs.gov.au/statistics/health/disability/disability-ageing-and-carers-australia-summary-findings/2022/key-findings-plain-language" },
+  { stat: "59%", label: "of Australians aged 15–74 had below-adequate health literacy (2006)", source: "ABS 4233.0, 2006", url: "https://www.abs.gov.au/ausstats/abs@.nsf/latestproducts/4233.0main%20features22006" },
+];
 function I({ d, size = 20 }: { d: keyof typeof icons; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -30,6 +42,7 @@ export default function Landing() {
         <div className="lp-wrap lp-nav">
           <Link to="/" className="lp-brand" aria-label="CarePath AI home"><Logo size={30} /><span>CarePath <b>AI</b></span></Link>
           <nav className="lp-links" aria-label="Page sections">
+            <a href="#problem">The problem</a>
             <a href="#how">How it works</a>
             <a href="#principles">Our principles</a>
             <a href="#safety">Safety</a>
@@ -48,11 +61,11 @@ export default function Landing() {
               <p className="lp-pill">Better prepared. Better organised. Better care.</p>
               <h1>Your healthcare journey doesn't start and end with an appointment.</h1>
               <p className="lp-lead">
-                CarePath helps you get ready for a consultation and keep track of what comes after — organised in plain language, from your own words.
+                You booked on HotDoc. CarePath gets you ready for the consult, shares your brief with your clinician, and makes sure the follow-ups actually happen, with your family or carer helping if you want.
               </p>
               <div className="lp-ctas">
-                <Link className="lp-btn lp-btn-primary" to="/register?next=preparation">Prepare for an Appointment <I d="arrow" size={18} /></Link>
-                <Link className="lp-btn lp-btn-secondary" to="/register?next=follow-up">Manage Follow-Up Tasks</Link>
+                <Link className="lp-btn lp-btn-primary" to="/try">Try the live demo <I d="arrow" size={18} /></Link>
+                <Link className="lp-btn lp-btn-secondary" to="/register">Create a free account</Link>
               </div>
               <ul className="lp-trust">
                 <li><I d="check" size={16} /> Never diagnoses</li>
@@ -93,33 +106,69 @@ export default function Landing() {
           </div>
         </section>
 
+        <section id="problem" className="lp-section lp-section-alt">
+          <div className="lp-wrap">
+            <div className="lp-section-head">
+              <h2>Booking is solved. What happens around the appointment isn't.</h2>
+              <p>Apps like HotDoc made it easy to get an appointment. The research shows where patients still struggle: before, during and after it.</p>
+            </div>
+            <div className="lp-stats">
+              {STATS.map((s) => (
+                <a key={s.stat} className="lp-stat" href={s.url} target="_blank" rel="noreferrer">
+                  <strong>{s.stat}</strong>
+                  <span>{s.label}</span>
+                  <small>{s.source} ↗</small>
+                </a>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section id="how" className="lp-section">
           <div className="lp-wrap">
             <div className="lp-section-head">
-              <h2>Support on both sides of your appointment</h2>
-              <p>Booking is only one step. CarePath helps with the parts that usually live on scraps of paper.</p>
+              <h2>One loop around every appointment</h2>
+              <p>Booked on HotDoc? Paste the confirmation. CarePath connects you, your clinician and the people who help you.</p>
             </div>
-            <div className="lp-steps">
+            <div className="lp-steps lp-steps-4">
               <article className="lp-card">
                 <span className="lp-icon lp-icon-teal"><I d="clipboard" size={22} /></span>
-                <span className="lp-kicker">Before</span>
-                <h3>AI appointment preparation</h3>
-                <p>Write down your concern, when it started and what you want to ask. CarePath turns it into a short brief you can edit, confirm and print.</p>
+                <span className="lp-kicker">1 · Before</span>
+                <h3>Prepare</h3>
+                <p>Import your booking, then write down your concern and questions. AI turns them into a one-page brief.</p>
                 <ul className="lp-list">
-                  <li>Every point links back to what you wrote</li>
-                  <li>Edit, delete or regenerate any section</li>
-                  <li>Printable one-page view</li>
+                  <li>Every point links to what you wrote</li>
+                  <li>Your questions, in priority order</li>
                 </ul>
               </article>
               <article className="lp-card">
-                <span className="lp-icon lp-icon-blue"><I d="checklist" size={22} /></span>
-                <span className="lp-kicker">After</span>
-                <h3>After-visit action tracker</h3>
-                <p>Paste the instructions you were given. CarePath lists the actions they contain so you can track them through to done.</p>
+                <span className="lp-icon lp-icon-blue"><I d="share" size={22} /></span>
+                <span className="lp-kicker">2 · During</span>
+                <h3>Share with your clinician</h3>
+                <p>A secure, expiring link. Your GP sees your brief, ticks off your questions, and sends back the plan.</p>
                 <ul className="lp-list">
-                  <li>Only actions that are actually written down</li>
-                  <li>Unclear items flagged to check with your clinician</li>
-                  <li>Medication wording kept exactly as given</li>
+                  <li>No clinician account needed</li>
+                  <li>Revoke the link anytime</li>
+                </ul>
+              </article>
+              <article className="lp-card">
+                <span className="lp-icon lp-icon-teal"><I d="checklist" size={22} /></span>
+                <span className="lp-kicker">3 · After</span>
+                <h3>Follow through</h3>
+                <p>The plan becomes a checklist with due dates. Overdue or unclear items are flagged before they're forgotten.</p>
+                <ul className="lp-list">
+                  <li>Medication wording kept exactly</li>
+                  <li>Draft a message to the clinic</li>
+                </ul>
+              </article>
+              <article className="lp-card">
+                <span className="lp-icon lp-icon-blue"><I d="people" size={22} /></span>
+                <span className="lp-kicker">4 · Together</span>
+                <h3>Your care circle</h3>
+                <p>Invite a parent, partner or carer to see what's coming up and take ownership of tasks.</p>
+                <ul className="lp-list">
+                  <li>Viewer or helper roles</li>
+                  <li>See who did what</li>
                 </ul>
               </article>
             </div>
