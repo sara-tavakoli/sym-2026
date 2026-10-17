@@ -1,15 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import {
-  api, ApiError, FIELD_LABELS, fmtDateTime, SECTION_KEYS, SECTION_TITLES,
-  type Appointment, type Brief, type BriefPoint, type PrepNotes, type SectionKey,
-} from "../lib/api";
+import { api, ApiError, fmtDateTime, SECTION_TITLES, type Appointment, type Brief, type PrepNotes, type SectionKey } from "../lib/api";
 import { useApp } from "../lib/app-context";
 import { Skeletons, Spinner } from "../components/ui";
+import { BriefSections, useBriefDraft } from "../components/BriefEditor";
 
 const EMPTY: PrepNotes = { main_concern: "", onset: "", background: "", experiences: "", questions: "", additional: "" };
 
-const PROMPTS: { key: keyof PrepNotes; label: string; hint: string; rows?: number }[] = [
+export const PROMPTS: { key: keyof PrepNotes; label: string; hint: string; rows?: number }[] = [
   { key: "main_concern", label: "What is your main concern?", hint: "In your own words — what do you want help with?" },
   { key: "onset", label: "When did it start?", hint: "Roughly is fine, e.g. “about three weeks ago”." },
   { key: "experiences", label: "What have you noticed or experienced?", hint: "Anything you've observed, in the order it happened if you can.", rows: 4 },
@@ -18,10 +16,6 @@ const PROMPTS: { key: keyof PrepNotes; label: string; hint: string; rows?: numbe
   { key: "additional", label: "Anything else to remember?", hint: "e.g. things to bring, things to mention." },
 ];
 
-type Draft = Record<SectionKey, { id?: string; key: string; text: string; field: string | null; quote: string | null; edited: boolean; user: boolean }[]>;
-const toDraft = (b: Brief): Draft =>
-  Object.fromEntries(SECTION_KEYS.map((s) => [s, b.sections[s].map((p: BriefPoint) => ({ ...p, key: p.id }))])) as Draft;
-
 export default function Prepare() {
   const { id } = useParams();
   const nav = useNavigate();
@@ -29,19 +23,17 @@ export default function Prepare() {
   const [appt, setAppt] = useState<Appointment | null>(null);
   const [notes, setNotes] = useState<PrepNotes>(EMPTY);
   const [brief, setBrief] = useState<Brief | null>(null);
-  const [draft, setDraft] = useState<Draft | null>(null);
-  const [dirty, setDirty] = useState(false);
+  const { draft, dirty, adopt: adoptDraft, ops, payload } = useBriefDraft();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [busy, setBusy] = useState<"" | "generate" | "save" | "confirm" | SectionKey>("");
   const [error, setError] = useState("");
   const [loadError, setLoadError] = useState("");
-  const counter = useRef(0);
 
   useEffect(() => {
     Promise.all([api.get<Appointment>(`/appointments/${id}`), api.get<{ notes: PrepNotes; brief: Brief | null }>(`/appointments/${id}/prep`)])
       .then(([a, p]) => {
         setAppt(a); setNotes(p.notes); setBrief(p.brief);
-        if (p.brief) { setDraft(toDraft(p.brief)); setStep(p.brief.status === "confirmed" ? 3 : 2); }
+        if (p.brief) { adoptDraft(p.brief); setStep(p.brief.status === "confirmed" ? 3 : 2); }
       })
       .catch((e: ApiError) => setLoadError(e.status === 404 ? "We couldn't find that appointment." : e.message));
   }, [id]);
@@ -49,7 +41,7 @@ export default function Prepare() {
   const fail = (e: unknown) => setError(e instanceof ApiError ? e.message : "Something went wrong. Please try again.");
   const hasNotes = Object.values(notes).some((v) => v.trim());
 
-  function adopt(b: Brief) { setBrief(b); setDraft(toDraft(b)); setDirty(false); }
+  function adopt(b: Brief) { setBrief(b); adoptDraft(b); }
 
   async function generate(section?: SectionKey) {
     setError(""); setBusy(section ?? "generate");
@@ -64,8 +56,7 @@ export default function Prepare() {
 
   async function saveEdits(silent = false) {
     if (!draft) return null;
-    const payload = { sections: Object.fromEntries(SECTION_KEYS.map((s) => [s, draft[s].filter((p) => p.text.trim()).map((p) => ({ id: p.id, text: p.text }))])) };
-    const r = await api.put<{ brief: Brief }>(`/appointments/${id}/brief`, payload);
+    const r = await api.put<{ brief: Brief }>(`/appointments/${id}/brief`, payload());
     adopt(r.brief);
     if (!silent) notify("Edits saved");
     return r.brief;
@@ -79,15 +70,6 @@ export default function Prepare() {
       adopt(r.brief); setStep(3); notify("Brief confirmed and saved");
     } catch (e) { fail(e); } finally { setBusy(""); }
   }
-
-  const update = (s: SectionKey, i: number, text: string) => { setDraft((d) => d && { ...d, [s]: d[s].map((p, j) => (j === i ? { ...p, text } : p)) }); setDirty(true); };
-  const remove = (s: SectionKey, i: number) => { setDraft((d) => d && { ...d, [s]: d[s].filter((_, j) => j !== i) }); setDirty(true); };
-  const move = (s: SectionKey, i: number, dir: -1 | 1) => setDraft((d) => {
-    if (!d) return d;
-    const list = [...d[s]]; const j = i + dir; if (j < 0 || j >= list.length) return d;
-    [list[i], list[j]] = [list[j], list[i]]; setDirty(true); return { ...d, [s]: list };
-  });
-  const add = (s: SectionKey) => { setDraft((d) => d && { ...d, [s]: [...d[s], { key: `new-${counter.current++}`, text: "", field: null, quote: null, edited: false, user: true }] }); setDirty(true); };
 
   if (loadError) return <div className="card empty"><h3>{loadError}</h3><Link className="btn" to="/app/appointments">Back to appointments</Link></div>;
   if (!appt) return <Skeletons rows={4} />;
@@ -138,34 +120,7 @@ export default function Prepare() {
           )}
           {brief.dropped > 0 && <div className="alert info">{brief.dropped} AI-suggested point{brief.dropped > 1 ? "s were" : " was"} removed because {brief.dropped > 1 ? "they" : "it"} couldn't be traced back to your notes.</div>}
 
-          {SECTION_KEYS.map((s) => (
-            <section className="card" key={s} aria-labelledby={`sec-${s}`}>
-              <div className="card-head">
-                <h2 id={`sec-${s}`}>{SECTION_TITLES[s]}</h2>
-                <button className="btn sm" onClick={() => generate(s)} disabled={!!busy}>{busy === s ? <Spinner /> : null} Regenerate</button>
-              </div>
-              {draft[s].length === 0 && <p className="muted small">Nothing here{s === "reason" ? "" : " — nothing was entered for this section"}. You can add your own point.</p>}
-              {draft[s].map((p, i) => (
-                <div key={p.key} className="point">
-                  <div className="point-row">
-                    <textarea aria-label={`${SECTION_TITLES[s]} point ${i + 1}`} rows={2} value={p.text} onChange={(e) => update(s, i, e.target.value)} maxLength={600} />
-                    <div className="point-actions">
-                      <button className="btn sm ghost" onClick={() => move(s, i, -1)} disabled={i === 0} aria-label="Move up">↑</button>
-                      <button className="btn sm ghost" onClick={() => move(s, i, 1)} disabled={i === draft[s].length - 1} aria-label="Move down">↓</button>
-                      <button className="btn sm ghost danger" onClick={() => remove(s, i)} aria-label="Delete point">✕</button>
-                    </div>
-                  </div>
-                  <div className="source">
-                    {p.user ? <span className="badge">Added by you</span> : (
-                      <><span className="badge info">Source: {FIELD_LABELS[p.field ?? ""] ?? p.field}</span> <q>{p.quote}</q></>
-                    )}
-                    {p.edited && <span className="badge warn" style={{ marginLeft: 6 }}>Edited</span>}
-                  </div>
-                </div>
-              ))}
-              <button className="btn sm" onClick={() => add(s)}>+ Add a point</button>
-            </section>
-          ))}
+          <BriefSections draft={draft} ops={ops} busy={busy} onRegenerate={(s) => generate(s)} />
 
           <div className="row between sticky-actions">
             <button className="btn" onClick={() => setStep(1)}>Edit my notes</button>
