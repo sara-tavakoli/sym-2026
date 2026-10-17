@@ -24,7 +24,7 @@ const at = (days: number, hour: number, minute = 0) => {
 const point = (text: string, field: string, quote: string) => ({ id: newId(), text, edited: false, user: false, field, quote });
 
 /** Seeds a realistic, fictional patient journey: before (prepared brief), after (instructions + tasks), plus a visit to prepare for. */
-export function seedDemo(uid: string) {
+export function seedDemo(uid: string, lockedHash: string) {
   const appt = db.prepare(`INSERT INTO appointments (id, user_id, starts_at, practitioner_name, service_type, clinic_name, location, purpose)
                            VALUES (?,?,?,?,?,?,?,?)`);
   const gp = newId(), past = newId(), dental = newId();
@@ -69,12 +69,56 @@ export function seedDemo(uid: string) {
   const task = db.prepare(`INSERT INTO follow_up_tasks (id, user_id, appointment_id, instruction_id, title, source_text, deadline, status, needs_clarification, clarification_reason)
                            VALUES (?,?,?,?,?,?,?,?,?,?)`);
   const med = "Medication wording is shown exactly as entered. Confirm any details with your healthcare professional or pharmacist.";
-  task.run(newId(), uid, past, instr, "Get blood test (FBC and iron studies)", "Blood test (FBC and iron studies) this week at any pathology collection centre.", "this week", "todo", 0, null);
-  task.run(newId(), uid, past, instr, "Book a review appointment", "Book a review appointment with me in 2 weeks to go through results.", "in 2 weeks", "completed", 0, null);
+  const blood = newId(), review = newId();
+  task.run(blood, uid, past, instr, "Get blood test (FBC and iron studies)", "Blood test (FBC and iron studies) this week at any pathology collection centre.", "this week", "todo", 0, null);
+  task.run(review, uid, past, instr, "Book a review appointment", "Book a review appointment with me in 2 weeks to go through results.", "in 2 weeks", "completed", 0, null);
   task.run(newId(), uid, past, instr, "Take iron supplement 1 tablet daily with food.", "Take iron supplement 1 tablet daily with food.", null, "in_progress", 1, med);
   task.run(newId(), uid, past, instr, "Stand up slowly and drink more water", "Stand up slowly and drink more water.", null, "todo", 0, null);
   task.run(newId(), uid, past, instr, "Call the clinic if dizziness gets worse", "Call the clinic soon if the dizziness gets worse.", null, "todo", 1, "\"Soon\" is unclear. Confirm with the clinic when you should call.");
+  seedCircle(uid, { blood, review }, lockedHash);
   return { gp, past, dental };
+}
+
+const ago = (hours: number) => new Date(Date.now() - hours * 3600_000).toISOString();
+
+/** Companion demo people (purged with the visitor): a sister who helps Alex, and a grandfather Alex helps. */
+function seedCircle(uid: string, tasks: { blood: string; review: string }, lockedHash: string) {
+  const user = db.prepare("INSERT INTO users (id, email, name, password_hash) VALUES (?,?,?,?)");
+  const tag = randomBytes(5).toString("hex");
+  const mia = newId(), joe = newId();
+  user.run(mia, `mia-${tag}@${DEMO_DOMAIN}`, "Mia (sister)", lockedHash);
+  user.run(joe, `joe-${tag}@${DEMO_DOMAIN}`, "Grandpa Joe", lockedHash);
+  const member = db.prepare("INSERT INTO care_members (id, owner_id, member_id, role, created_at) VALUES (?,?,?,?,?)");
+  const log = db.prepare("INSERT INTO care_activity (id, owner_id, actor_id, kind, task_id, message, created_at) VALUES (?,?,?,?,?,?,?)");
+
+  // Mia helps Alex: she booked the review and has taken on the blood test.
+  member.run(newId(), uid, mia, "helper", ago(72));
+  db.prepare("UPDATE follow_up_tasks SET assignee_user_id = ? WHERE id IN (?, ?)").run(mia, tasks.blood, tasks.review);
+  log.run(newId(), uid, mia, "member_joined", null, "joined the care circle as a helper", ago(72));
+  log.run(newId(), uid, mia, "task_taken", tasks.review, "took on “Book a review appointment”", ago(50));
+  log.run(newId(), uid, mia, "task_completed", tasks.review, "marked “Book a review appointment” done", ago(49));
+  log.run(newId(), uid, mia, "task_taken", tasks.blood, "took on “Get blood test (FBC and iron studies)”", ago(3));
+
+  // Alex helps Grandpa Joe, so "People I support" has a real example.
+  member.run(newId(), joe, uid, "helper", ago(200));
+  const appt = db.prepare("INSERT INTO appointments (id, user_id, starts_at, practitioner_name, service_type, clinic_name, location, purpose) VALUES (?,?,?,?,?,?,?,?)");
+  const cardio = newId(), joePast = newId();
+  appt.run(cardio, joe, at(6, 9, 30), "Dr Helen Park", "Cardiologist", "Northside Heart Clinic (fictional)", "3 Demo Ave, Chatswood NSW 2067", "Blood pressure review");
+  appt.run(joePast, joe, at(-10, 11, 0), "Dr Priya Lee", "General Practitioner (GP)", "Harbourside Family Practice (fictional)", null, "Check-up");
+  saveBrief(cardio, joe, {
+    reason: [{ id: newId(), text: "Blood pressure readings higher in the mornings", edited: false, user: true, field: null, quote: null }],
+    timeline: [], background: [],
+    questions: [
+      { id: newId(), text: "Should I keep taking readings every morning?", edited: false, user: true, field: null, quote: null },
+      { id: newId(), text: "Is it safe to keep walking every day?", edited: false, user: true, field: null, quote: null },
+    ],
+    notes: [{ id: newId(), text: "Bring the blood pressure diary", edited: false, user: true, field: null, quote: null }],
+  }, 0, "confirmed");
+  const jt = db.prepare("INSERT INTO follow_up_tasks (id, user_id, appointment_id, title, source_text, deadline, status) VALUES (?,?,?,?,?,?,?)");
+  const lift = newId();
+  jt.run(lift, joe, joePast, "Arrange a lift to the cardiology appointment", "Added manually", null, "todo");
+  jt.run(newId(), joe, joePast, "Pick up blood pressure monitor from pharmacy", "Added manually", null, "completed");
+  log.run(newId(), joe, uid, "member_joined", null, "joined the care circle as a helper", ago(200));
 }
 
 /** Removes expired demo accounts (cascades to everything they own). */
@@ -88,7 +132,8 @@ demoRouter.post("/", limiter, async (_req, res) => {
   const email = `visitor-${randomBytes(5).toString("hex")}@${DEMO_DOMAIN}`;
   db.prepare("INSERT INTO users (id, email, name, password_hash) VALUES (?,?,?,?)")
     .run(id, email, "Alex (demo)", await hashPassword(randomBytes(24).toString("hex")));
-  seedDemo(id);
+  // Companion accounts get a hash of a discarded random password, so nobody can sign in as them.
+  seedDemo(id, await hashPassword(randomBytes(24).toString("hex")));
   const { token, expires } = createSession(id);
   res.cookie(SESSION_COOKIE, token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", expires, path: "/" });
   res.status(201).json({ user: { id, email, name: "Alex (demo)" } });

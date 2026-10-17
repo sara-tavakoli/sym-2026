@@ -52,3 +52,16 @@ test("expired demo accounts are purged with everything they own", async () => {
   assert.equal((await call(r.cookie, "GET", "/api/dashboard")).status, 401);
   assert.equal((db.prepare("SELECT COUNT(*) AS n FROM appointments WHERE user_id = ?").get(r.data.user.id) as { n: number }).n, 0);
 });
+
+test("the demo shows both sides of the care circle", async () => {
+  const r = await call("", "POST", "/api/demo");
+  const circle = await call(r.cookie, "GET", "/api/circle");
+  assert.equal(circle.status, 200);
+  assert.ok(JSON.stringify(circle.data).includes("Mia (sister)"));
+  const supporting = await call(r.cookie, "GET", "/api/supporting");
+  assert.equal(supporting.data.items.length, 1);
+  const joe = await call(r.cookie, "GET", `/api/supporting/${supporting.data.items[0].owner_id}`);
+  assert.equal(joe.status, 200);
+  assert.equal(joe.data.role, "helper");
+  assert.equal(joe.data.appointments[0].brief_ready, 1);
+});
