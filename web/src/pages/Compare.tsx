@@ -35,7 +35,7 @@ export default function Compare() {
 
   return (
     <div className="stack fade-in">
-      <Link to={back} className="small">← Back to results</Link>
+      <Link to={back} className="back-link">← Back to results</Link>
       <div className="page-head"><div><h1>Compare providers</h1><p className="muted">Side-by-side practical details, checked against your preferences.</p></div></div>
       <div className="alert info" role="note">This compares practical details only (location, hours, telehealth, accessibility, billing, language). It does not indicate the quality of clinical care. All providers shown are fictional demo listings.</div>
 

@@ -34,44 +34,51 @@ export default function AppointmentDetail() {
   if (!appt) return <Skeletons rows={3} />;
 
   const isPast = new Date(appt.starts_at) < new Date();
+  const prepText = appt.prep_status === "confirmed" ? "Your brief is confirmed and ready to take with you."
+    : appt.prep_status === "none" ? "Write down your concerns and questions, and CarePath will organise them into a brief you can edit."
+    : "You've started preparing. Pick up where you left off.";
   return (
-    <div className="stack fade-in">
-      <Link to="/app/appointments" className="small">← All appointments</Link>
-      <div className="page-head">
-        <div>
+    <div className="fade-in">
+      <Link to="/app/appointments" className="back-link">← All appointments</Link>
+      <header className="detail-head">
+        <div className="detail-title">
           <h1>{appt.practitioner_name}</h1>
-          <p className="muted">{appt.service_type} · {fmtDateTime(appt.starts_at)}</p>
+          <p className="detail-when">{fmtDateTime(appt.starts_at)} <span className={`when-tag ${isPast ? "" : "upcoming"}`}>{isPast ? "Past" : "Upcoming"}</span></p>
         </div>
-        <div className="row">
+        <div className="row detail-actions">
           <button className="btn" onClick={() => setEditing(true)}>Edit</button>
-          <button className="btn danger" onClick={() => setConfirmDelete(true)}>Delete</button>
+          <button className="btn ghost danger" onClick={() => setConfirmDelete(true)}>Delete</button>
         </div>
+      </header>
+      <dl className="facts">
+        <div><dt>Service</dt><dd>{appt.service_type}</dd></div>
+        <div><dt>Clinic</dt><dd>{appt.clinic_name}</dd></div>
+        {appt.location && <div><dt>Location</dt><dd>{appt.location}</dd></div>}
+        {appt.purpose && <div><dt>Purpose</dt><dd>{appt.purpose}</dd></div>}
+      </dl>
+
+      <div className="detail-sections">
+        <section className="panel section-pad" aria-labelledby="prep-h">
+          <div className="panel-head">
+            <h2 id="prep-h">Preparation</h2>
+            <PrepBadge status={appt.prep_status} />
+          </div>
+          <p className="muted">{prepText}</p>
+          <div className="row">
+            <Link className={`btn ${appt.prep_status === "confirmed" ? "" : "primary"}`} to={`/app/appointments/${appt.id}/prepare`}>{appt.prep_status === "none" ? "Prepare for this appointment" : "Open preparation"}</Link>
+            {(appt.prep_status === "draft" || appt.prep_status === "confirmed") && <Link className={`btn ${appt.prep_status === "confirmed" ? "primary" : ""}`} to={`/app/appointments/${appt.id}/brief`}>Printable brief</Link>}
+          </div>
+        </section>
+
+        <section className="panel section-pad" id="follow-up" aria-labelledby="fu-h">
+          <div className="panel-head">
+            <h2 id="fu-h">After the visit</h2>
+            <span className="muted small">{appt.open_tasks} open · {appt.done_tasks} done</span>
+          </div>
+          {!isPast && <p className="muted small">This appointment hasn't happened yet. Add instructions once you've received them.</p>}
+          <FollowUpPanel appointmentId={appt.id} onChanged={refresh} />
+        </section>
       </div>
-
-      <section className="card">
-        <div className="card-head"><h2>Details</h2><span className={`badge ${isPast ? "" : "info"}`}>{isPast ? "Past" : "Upcoming"}</span></div>
-        <dl className="details" style={{ margin: 0 }}>
-          <dt>Clinic</dt><dd>{appt.clinic_name}</dd>
-          {appt.location && <><dt>Location</dt><dd>{appt.location}</dd></>}
-          {appt.purpose && <><dt>Purpose</dt><dd>{appt.purpose}</dd></>}
-        </dl>
-      </section>
-
-      <section className="card" aria-labelledby="prep-h">
-        <div className="card-head"><h2 id="prep-h">Appointment preparation</h2><PrepBadge status={appt.prep_status} /></div>
-        <p className="muted">{appt.prep_status === "confirmed" ? "Your brief is confirmed and ready to take with you." : appt.prep_status === "none" ? "Write down your concerns and questions and CarePath will organise them into a brief you can edit." : "You've started preparing. Pick up where you left off."}</p>
-        <div className="row">
-          <Link className="btn primary" to={`/app/appointments/${appt.id}/prepare`}>{appt.prep_status === "none" ? "Prepare for this appointment" : "Open preparation"}</Link>
-          {(appt.prep_status === "draft" || appt.prep_status === "confirmed") && <Link className="btn" to={`/app/appointments/${appt.id}/brief`}>Printable brief</Link>}
-        </div>
-      </section>
-
-      <section className="card" id="follow-up" aria-labelledby="fu-h">
-        <div className="card-head"><h2 id="fu-h">After the visit</h2>
-          <span className="badge">{appt.open_tasks} open · {appt.done_tasks} done</span></div>
-        {!isPast && <div className="alert info">This appointment hasn't happened yet. You can add instructions once you've received them.</div>}
-        <FollowUpPanel appointmentId={appt.id} onChanged={refresh} />
-      </section>
 
       {editing && <AppointmentForm existing={appt} onClose={() => setEditing(false)} onSaved={(a) => { setAppt(a); setEditing(false); notify("Changes saved"); }} />}
       {confirmDelete && (

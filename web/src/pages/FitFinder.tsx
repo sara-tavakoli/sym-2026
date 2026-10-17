@@ -30,6 +30,8 @@ export default function FitFinder() {
   const [compare, setCompare] = useState<string[]>([]);
   const [saved, setSaved] = useState<SavedSearch[]>([]);
   const [addFor, setAddFor] = useState<SearchResult["items"][number] | null>(null);
+  // On small screens, a search that's already applied starts with the filters collapsed so results come first.
+  const [filtersOpen, setFiltersOpen] = useState(() => { try { return !(urlPrefs.category && window.matchMedia("(max-width: 820px)").matches); } catch { return true; } });
 
   // Keep the form in step with the URL (assistant handoff, back/forward, saved searches).
   useEffect(() => { setForm({ ...EMPTY, ...urlPrefs }); }, [urlPrefs]);
@@ -58,7 +60,10 @@ export default function FitFinder() {
     const q = prefsToQuery(prefs);
     setParams(p > 1 ? `${q}&page=${p}` : q);
   }
-  const submit = (e: FormEvent) => { e.preventDefault(); setCompare([]); run(form); };
+  const submit = (e: FormEvent) => {
+    e.preventDefault(); setCompare([]); run(form);
+    try { if (form.category && window.matchMedia("(max-width: 820px)").matches) setFiltersOpen(false); } catch { /* ignore */ }
+  };
   const set = <K extends keyof Prefs>(k: K, v: Prefs[K] | undefined) => setForm((f) => ({ ...f, [k]: v }));
   const toggleDay = (d: Day) => set("days", (form.days ?? []).includes(d) ? form.days!.filter((x) => x !== d) : [...(form.days ?? []), d]);
   const toggleAccess = (a: AccessFeature) => set("accessibility", (form.accessibility ?? []).includes(a) ? form.accessibility!.filter((x) => x !== a) : [...(form.accessibility ?? []), a]);
@@ -74,11 +79,11 @@ export default function FitFinder() {
   }
 
   async function saveSearch() {
-    if (!form.category) return;
-    const name = window.prompt("Name this search", prefChips(form, meta).map((c) => c.label).slice(0, 3).join(" · "));
+    if (!urlPrefs.category) return;
+    const name = window.prompt("Name this search", prefChips(urlPrefs, meta).map((c) => c.label).slice(0, 3).join(" · "));
     if (!name) return;
     try {
-      const s = await api.post<SavedSearch>("/fit-finder/saved", { name, prefs: form });
+      const s = await api.post<SavedSearch>("/fit-finder/saved", { name, prefs: { radius_km: 10, ...urlPrefs } });
       setSaved((x) => [{ ...s, created_at: new Date().toISOString() }, ...x]);
       notify("Search saved");
     } catch (e) { notify(e instanceof ApiError ? e.message : "Couldn't save the search", "error"); }
@@ -126,8 +131,12 @@ export default function FitFinder() {
         )}
       </section>
 
-      <form className="card ff-form" onSubmit={submit} aria-labelledby="filters-h">
-        <div className="card-head"><h2 id="filters-h">Filters</h2><button type="button" className="btn sm ghost" onClick={() => { setForm(EMPTY); setUnderstood(null); }}>Clear</button></div>
+      <details className="card ff-form" open={filtersOpen} onToggle={(e) => setFiltersOpen((e.currentTarget as HTMLDetailsElement).open)}>
+        <summary className="ff-summary">
+          <h2 id="filters-h">Filters</h2>
+          {!filtersOpen && <span className="ff-summary-text">{prefChips(urlPrefs, meta).map((c) => c.label).join(" · ") || "None applied"}</span>}
+        </summary>
+      <form onSubmit={submit} aria-labelledby="filters-h">
         <div className="ff-grid">
           <div className="field">
             <label htmlFor="ff-cat">Service type *</label>
@@ -198,10 +207,11 @@ export default function FitFinder() {
           </fieldset>
         </div>
         <div className="row" style={{ justifyContent: "flex-end" }}>
-          <button type="button" className="btn" onClick={saveSearch} disabled={!form.category}>Save search</button>
+          <button type="button" className="btn ghost" onClick={() => { setForm(EMPTY); setUnderstood(null); }}>Clear</button>
           <button className="btn primary" disabled={searching}>{searching && <Spinner />} Search</button>
         </div>
       </form>
+      </details>
 
       {saved.length > 0 && (
         <div className="saved-row" aria-label="Saved searches">
@@ -233,7 +243,10 @@ export default function FitFinder() {
         {result && (
           <>
             <div className="results-head">
+              <div className="results-title">
               <h2 id="results-h">{result.total} {result.total === 1 ? "provider" : "providers"}{result.origin ? ` near ${result.origin.suburb}` : ""}</h2>
+                <button type="button" className="btn sm" onClick={saveSearch}>Save search</button>
+              </div>
               <p className="small muted">Ranked by how many of your preferences are met, then by distance. “Not verified” is never counted as a match.{result.excluded_strict ? ` ${result.excluded_strict} hidden because they don't meet every preference.` : ""}</p>
             </div>
             {result.total === 0 && (

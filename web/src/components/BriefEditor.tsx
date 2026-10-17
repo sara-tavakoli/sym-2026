@@ -43,35 +43,35 @@ export function BriefSections({ draft, ops, busy, onRegenerate, sourceNote }: {
   sourceNote?: string;
 }) {
   return (
-    <>
+    <div className="panel brief-doc">
       {SECTION_KEYS.map((s) => (
-        <section className="card" key={s} aria-labelledby={`sec-${s}`}>
-          <div className="card-head">
+        <section className="brief-sec" key={s} aria-labelledby={`sec-${s}`}>
+          <div className="brief-sec-head">
             <h2 id={`sec-${s}`}>{SECTION_TITLES[s]}</h2>
-            <button className="btn sm" onClick={() => onRegenerate(s)} disabled={!!busy}>{busy === s ? <Spinner /> : null} Regenerate</button>
+            <button className="text-btn" onClick={() => onRegenerate(s)} disabled={!!busy}>{busy === s ? <Spinner /> : null} Regenerate<span className="sr-only"> {SECTION_TITLES[s]}</span></button>
           </div>
-          {draft[s].length === 0 && <p className="muted small">Nothing here{s === "reason" ? "" : " — nothing was entered for this section"}. You can add your own point.</p>}
-          {draft[s].map((p, i) => (
-            <div key={p.key} className="point">
-              <div className="point-row">
-                <textarea aria-label={`${SECTION_TITLES[s]} point ${i + 1}`} rows={2} value={p.text} onChange={(e) => ops.update(s, i, e.target.value)} maxLength={600} />
-                <div className="point-actions">
-                  <button className="btn sm ghost" onClick={() => ops.move(s, i, -1)} disabled={i === 0} aria-label="Move up">↑</button>
-                  <button className="btn sm ghost" onClick={() => ops.move(s, i, 1)} disabled={i === draft[s].length - 1} aria-label="Move down">↓</button>
-                  <button className="btn sm ghost danger" onClick={() => ops.remove(s, i)} aria-label="Delete point">✕</button>
+          {draft[s].length === 0 && <p className="muted small">{s === "reason" ? "Nothing here yet." : "Nothing was entered for this section."} You can add your own point.</p>}
+          <ol className={`points ${s === "timeline" || s === "questions" ? "numbered" : ""}`}>
+            {draft[s].map((p, i) => (
+              <li key={p.key} className="point">
+                <div className="point-row">
+                  <textarea className="point-input" aria-label={`${SECTION_TITLES[s]} point ${i + 1}`} rows={1} value={p.text} onChange={(e) => ops.update(s, i, e.target.value)} maxLength={600} placeholder="Write a point" />
+                  <div className="point-actions">
+                    <button className="icon-btn" onClick={() => ops.move(s, i, -1)} disabled={i === 0} aria-label="Move up" title="Move up">↑</button>
+                    <button className="icon-btn" onClick={() => ops.move(s, i, 1)} disabled={i === draft[s].length - 1} aria-label="Move down" title="Move down">↓</button>
+                    <button className="icon-btn danger" onClick={() => ops.remove(s, i)} aria-label="Delete point" title="Delete">✕</button>
+                  </div>
                 </div>
-              </div>
-              <div className="source">
-                {p.user ? <span className="badge">Added by you</span> : (
-                  <><span className="badge info">Source: {FIELD_LABELS[p.field ?? ""] ?? p.field}{sourceNote ? ` · ${sourceNote}` : ""}</span> <q>{p.quote}</q></>
-                )}
-                {p.edited && <span className="badge warn" style={{ marginLeft: 6 }}>Edited</span>}
-              </div>
-            </div>
-          ))}
-          <button className="btn sm" onClick={() => ops.add(s)}>+ Add a point</button>
+                <p className="source">
+                  {p.user ? "Added by you" : <>Source: {FIELD_LABELS[p.field ?? ""] ?? p.field}{sourceNote ? ` · ${sourceNote}` : ""} — <q>{p.quote}</q></>}
+                  {p.edited && <span className="edited"> · Edited</span>}
+                </p>
+              </li>
+            ))}
+          </ol>
+          <button className="text-btn add-point" onClick={() => ops.add(s)}>+ Add a point<span className="sr-only"> to {SECTION_TITLES[s]}</span></button>
         </section>
       ))}
-    </>
+    </div>
   );
 }

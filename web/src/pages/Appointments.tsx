@@ -41,32 +41,39 @@ export default function Appointments() {
         ))}
       </div>
 
-      <div className="card">
+      <div className="panel list-panel">
         {error && <div className="alert error" role="alert">{error} <button className="btn sm" onClick={load}>Retry</button></div>}
         {!data && !error && <Skeletons />}
         {data && data.items.length === 0 && (
-          <div className="empty">
-            <h3>{scope === "upcoming" ? "No upcoming appointments" : "No past appointments"}</h3>
-            <p>{scope === "upcoming" ? "Add an appointment to prepare for it and track follow-ups." : "Appointments move here after their date has passed."}</p>
-            {scope === "upcoming" && <button className="btn primary" onClick={() => setCreating(true)}>Add an appointment</button>}
+          <div className="panel-empty">
+            <p><strong>{scope === "upcoming" ? "No upcoming appointments" : "No past appointments"}</strong></p>
+            <p className="muted">{scope === "upcoming" ? "Add an appointment to prepare for it and keep track of what comes after." : "Appointments move here after their date has passed."}</p>
+            {scope === "upcoming" && <button className="btn" onClick={() => setCreating(true)}>Add an appointment</button>}
           </div>
         )}
-        {data?.items.map((a) => {
-          const d = new Date(a.starts_at);
-          return (
-            <Link key={a.id} to={`/app/appointments/${a.id}`} className="item">
-              <div className="item-date"><b>{d.getDate()}</b><span>{d.toLocaleString("en-AU", { month: "short" })}</span></div>
-              <div className="item-body">
-                <div className="item-title">{a.practitioner_name} <span className="muted" style={{ fontWeight: 400 }}>· {a.service_type}</span></div>
-                <div className="item-sub">{a.clinic_name} · {d.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" })}{a.purpose ? ` · ${a.purpose}` : ""}</div>
-              </div>
-              <div className="row" style={{ justifyContent: "flex-end" }}>
-                <PrepBadge status={a.prep_status} />
-                {a.open_tasks > 0 && <span className="badge warn">{a.open_tasks} open task{a.open_tasks > 1 ? "s" : ""}</span>}
-              </div>
-            </Link>
-          );
-        })}
+        {data && data.items.length > 0 && (
+          <ol className="rows">
+            {data.items.map((a) => {
+              const d = new Date(a.starts_at);
+              return (
+                <li key={a.id} className="appt-row">
+                  <Link to={`/app/appointments/${a.id}`} className="appt-main">
+                    <span className="appt-date" aria-hidden="true"><span className="appt-day">{d.getDate()}</span><span className="appt-mon">{d.toLocaleString("en-AU", { month: "short" })}</span></span>
+                    <span className="appt-text">
+                      <span className="appt-title">{a.practitioner_name}</span>
+                      <span className="appt-meta">{d.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}, {d.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" })} · {a.service_type} · {a.clinic_name}</span>
+                      {a.purpose && <span className="appt-meta">{a.purpose}</span>}
+                    </span>
+                  </Link>
+                  <span className="row-status">
+                    <PrepBadge status={a.prep_status} />
+                    {a.open_tasks > 0 && <span className="row-note">{a.open_tasks} open task{a.open_tasks > 1 ? "s" : ""}</span>}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        )}
         {data && data.total > data.pageSize && (
           <nav className="pager" aria-label="Pagination">
             <button className="btn sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</button>

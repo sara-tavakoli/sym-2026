@@ -108,7 +108,6 @@ export function ProviderCard({ item, selected, onToggleCompare, compareDisabled,
   return (
     <article className="provider-card" aria-labelledby={`p-${p.id}`}>
       <header className="provider-head">
-        <div className="provider-avatar" aria-hidden="true">{p.name.replace(/^Dr\s+/, "").split(" ").map((w) => w[0]).slice(0, 2).join("")}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <h3 id={`p-${p.id}`}>{p.name}</h3>
           <p className="provider-sub">{p.category.name} · {p.clinic.name}</p>

@@ -32,11 +32,10 @@ export function Skeletons({ rows = 3 }: { rows?: number }) {
   return <div aria-busy="true" aria-label="Loading">{Array.from({ length: rows }, (_, i) => <div key={i} className="skeleton" style={{ height: 56, marginBottom: 10 }} />)}</div>;
 }
 
+/** Preparation status as quiet text with a status dot (colour is never the only signal). */
 export function PrepBadge({ status }: { status: PrepStatus }) {
-  if (status === "confirmed") return <span className="badge ok">Brief ready</span>;
-  if (status === "draft") return <span className="badge info">Brief draft</span>;
-  if (status === "notes") return <span className="badge info">Notes started</span>;
-  return <span className="badge">Not prepared</span>;
+  const [tone, label] = status === "confirmed" ? ["ok", "Brief ready"] : status === "draft" ? ["info", "Brief in draft"] : status === "notes" ? ["info", "Notes started"] : ["muted", "Not prepared"];
+  return <span className={`status status-${tone}`}>{label}</span>;
 }
 
 export function Disclaimer({ compact = false }: { compact?: boolean }) {
