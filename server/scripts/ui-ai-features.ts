@@ -28,6 +28,8 @@ await page.getByLabel("Name").fill("AI Features Tester (fictional)");
 await page.getByLabel("Email").fill(`ai-features-${Date.now()}@example.com`);
 await page.getByLabel("Password").fill("ai-features-pass-1");
 await page.getByRole("button", { name: "Create account" }).click();
+await page.getByRole("heading", { name: /Hello, AI/ }).waitFor();
+await page.goto(base + "/app/assistant");
 await page.getByRole("heading", { name: "CarePath AI Assistant" }).waitFor();
 
 // ---------- 1. conversational preparation ----------

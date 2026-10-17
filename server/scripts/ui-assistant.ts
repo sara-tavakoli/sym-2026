@@ -27,8 +27,10 @@ for (const [label, viewport, scheme] of [["desktop-light", { width: 1280, height
   await page.getByLabel("Email").fill("demo@carepath.example");
   await page.getByLabel("Password").fill("demo-password-1");
   await page.getByRole("button", { name: "Log in" }).click();
+  await page.getByRole("heading", { name: /Hello, Demo/ }).waitFor();
+  ok(`${label}: compact assistant entry on the dashboard`, await page.getByRole("heading", { name: "Ask the assistant" }).isVisible());
+  await page.goto(base + "/app/assistant");
   await page.getByRole("heading", { name: "CarePath AI Assistant" }).waitFor();
-  ok(`${label}: assistant is on the dashboard`, true);
   ok(`${label}: example prompts shown`, (await page.locator(".assistant-chip").count()) === 4);
   ok(`${label}: no horizontal overflow`, await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   await page.waitForTimeout(300);
@@ -80,9 +82,10 @@ for (const [label, viewport, scheme] of [["desktop-light", { width: 1280, height
     await page.screenshot({ path: `shots/assistant-${label}-chat.png`, fullPage: true });
 
     // conversation carries to the AI Assistant page (memory) and is gone after reload (not persisted)
-    await page.getByRole("link", { name: "AI Assistant" }).click();
+    await page.locator(".sidebar").getByRole("link", { name: "Dashboard" }).click();
+    await page.locator(".sidebar").getByRole("link", { name: "AI Assistant" }).click();
     await page.waitForURL(/\/app\/assistant$/);
-    ok("conversation shared with the AI Assistant page", (await page.locator(".msg-user").count()) === 5);
+    ok("conversation kept when returning to the AI Assistant page", (await page.locator(".msg-user").count()) === 5);
     await page.screenshot({ path: `shots/assistant-page-${label}.png` });
     await page.reload();
     await page.getByRole("heading", { name: "CarePath AI Assistant" }).waitFor();

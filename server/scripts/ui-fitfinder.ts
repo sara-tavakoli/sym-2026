@@ -26,9 +26,9 @@ for (const [label, viewport, scheme] of [["desktop-light", { width: 1280, height
   // Navigation
   if (label === "desktop-light") {
     for (const n of ["Dashboard", "Appointments", "AI Assistant", "AI Preparation", "Fit Finder", "Follow-Up Tracker", "Settings"]) {
-      ok(`sidebar has ${n}`, await page.locator(".sidebar nav").getByRole("link", { name: n }).isVisible());
+      ok(`sidebar has ${n}`, await page.locator(".sidebar").getByRole("link", { name: n }).isVisible());
     }
-    await page.locator(".sidebar nav").getByRole("link", { name: "Fit Finder" }).click();
+    await page.locator(".sidebar").getByRole("link", { name: "Fit Finder" }).click();
   } else {
     ok("mobile: Find in bottom nav", await page.locator(".bottomnav").getByText("Find").isVisible());
     await page.locator(".bottomnav").getByText("Find").click();

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api, ApiError, type AssistantReply, type ChatMessage, type Draft } from "../lib/api";
 import { SearchSummary } from "./fit";
 import { Spinner } from "./ui";
@@ -41,7 +41,9 @@ export function Assistant({ variant = "panel" }: { variant?: "panel" | "page" })
   const { chat, setChat, notify } = useApp();
   const nav = useNavigate();
   const [briefing, setBriefing] = useState(false);
-  const [input, setInput] = useState("");
+  // Text typed into the dashboard entry point arrives as router state; it prefills the box and is never auto-sent.
+  const location = useLocation();
+  const [input, setInput] = useState(() => (location.state as { draft?: string } | null)?.draft ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const logRef = useRef<HTMLDivElement>(null);
