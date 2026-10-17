@@ -5,11 +5,11 @@ import { newId, requireAuth } from "../auth.js";
 import { aiLimiter } from "../ai/limit.js";
 import { AiError } from "../ai/client.js";
 import { FIELDS, SECTIONS, generateBrief, type Field, type PrepInput, type Section } from "../ai/brief.js";
+import { applyEdits, editBody, fromGenerated, type StoredPoint, type ViewPoint } from "../briefs.js";
 
 export const prepRouter = Router({ mergeParams: true });
 prepRouter.use(requireAuth);
 
-const MAX_POINTS = 20;
 const pid = (req: Request) => (req.params as Record<string, string>).id;
 
 function ownsAppointment(req: Request, res: Response): boolean {
@@ -20,18 +20,16 @@ function ownsAppointment(req: Request, res: Response): boolean {
 
 const emptyNotes = (): PrepInput => ({ main_concern: "", onset: "", background: "", experiences: "", questions: "", additional: "" });
 
-function loadNotes(apptId: string, uid: string): PrepInput {
+export function loadNotes(apptId: string, uid: string): PrepInput {
   const row = db.prepare("SELECT main_concern, onset, background, experiences, questions, additional FROM preparation_notes WHERE appointment_id = ? AND user_id = ?").get(apptId, uid) as Record<Field, string | null> | undefined;
   const out = emptyNotes();
   if (row) for (const f of FIELDS) out[f] = row[f] ?? "";
   return out;
 }
 
-interface StoredPoint { id: string; text: string; edited: boolean; user: boolean }
 interface StoredContent { sections: Record<Section, StoredPoint[]>; dropped: number }
-interface ViewPoint extends StoredPoint { field: string | null; quote: string | null }
 
-function loadBrief(apptId: string, uid: string) {
+export function loadBrief(apptId: string, uid: string) {
   const row = db.prepare("SELECT id, status, content_json, updated_at FROM appointment_briefs WHERE appointment_id = ? AND user_id = ?").get(apptId, uid) as
     { id: string; status: "draft" | "confirmed"; content_json: string; updated_at: string } | undefined;
   if (!row) return null;
@@ -45,10 +43,11 @@ function loadBrief(apptId: string, uid: string) {
   return { id: row.id, status: row.status, updated_at: row.updated_at, dropped: content.dropped, sections };
 }
 
-function saveBrief(apptId: string, uid: string, sections: Record<Section, ViewPoint[]>, dropped: number, status: "draft" | "confirmed") {
+export function saveBrief(apptId: string, uid: string, sections: Record<Section, ViewPoint[]>, dropped: number, status: "draft" | "confirmed") {
   const stored: StoredContent = { dropped, sections: {} as StoredContent["sections"] };
   for (const s of SECTIONS) stored.sections[s] = sections[s].map(({ id, text, edited, user }) => ({ id, text, edited, user }));
-  db.exec("BEGIN");
+  // SAVEPOINT (not BEGIN) so callers can wrap this in a larger transaction.
+  db.exec("SAVEPOINT save_brief");
   try {
     const existing = db.prepare("SELECT id FROM appointment_briefs WHERE appointment_id = ? AND user_id = ?").get(apptId, uid) as { id: string } | undefined;
     const briefId = existing?.id ?? newId();
@@ -60,8 +59,8 @@ function saveBrief(apptId: string, uid: string, sections: Record<Section, ViewPo
     }
     const ins = db.prepare("INSERT INTO brief_source_refs (id, user_id, brief_id, section, point_id, source_field, source_text) VALUES (?,?,?,?,?,?,?)");
     for (const s of SECTIONS) for (const p of sections[s]) if (p.field && p.quote) ins.run(newId(), uid, briefId, s, p.id, p.field, p.quote);
-    db.exec("COMMIT");
-  } catch (e) { db.exec("ROLLBACK"); throw e; }
+    db.exec("RELEASE save_brief");
+  } catch (e) { db.exec("ROLLBACK TO save_brief"); db.exec("RELEASE save_brief"); throw e; }
 }
 
 const noteText = z.string().max(3000).optional().default("").transform((s) => s.trim());
@@ -98,11 +97,7 @@ async function generate(req: Request, res: Response, only?: Section) {
   try {
     const draft = await generateBrief(notes);
     const existing = loadBrief(apptId, uid);
-    const sections = {} as Record<Section, ViewPoint[]>;
-    for (const s of SECTIONS) {
-      if (only && existing && s !== only) { sections[s] = existing.sections[s]; continue; }
-      sections[s] = draft.sections[s].map((p) => ({ id: newId(), text: p.text, edited: false, user: false, field: p.field, quote: p.quote }));
-    }
+    const sections = fromGenerated(draft, existing?.sections, only);
     saveBrief(apptId, uid, sections, (existing?.dropped ?? 0) * (only ? 1 : 0) + draft.dropped, "draft");
     res.json({ brief: loadBrief(apptId, uid) });
   } catch (e) { aiFail(res, e); }
@@ -114,26 +109,13 @@ prepRouter.post("/brief/sections/:section/regenerate", aiLimiter, (req, res) => 
   return generate(req, res, section);
 });
 
-const editBody = z.object({
-  sections: z.object(Object.fromEntries(SECTIONS.map((s) => [s, z.array(z.object({ id: z.string().optional(), text: z.string().trim().min(1, "A point can't be empty").max(600) })).max(MAX_POINTS)])) as Record<Section, z.ZodArray<z.ZodObject<{ id: z.ZodOptional<z.ZodString>; text: z.ZodString }>>>),
-});
-
 // Saves the user's edits. Source links (field + quote) are taken from the stored brief by point id, never from the client.
 prepRouter.put("/brief", (req, res) => {
   if (!ownsAppointment(req, res)) return;
   const uid = req.user!.id, apptId = pid(req);
   const body = editBody.parse(req.body);
   const existing = loadBrief(apptId, uid);
-  const known = new Map<string, ViewPoint>();
-  if (existing) for (const s of SECTIONS) for (const p of existing.sections[s]) known.set(p.id, p);
-  const sections = {} as Record<Section, ViewPoint[]>;
-  for (const s of SECTIONS) {
-    sections[s] = body.sections[s].map((p) => {
-      const old = p.id ? known.get(p.id) : undefined;
-      if (old) return { ...old, text: p.text, edited: old.edited || old.text !== p.text };
-      return { id: newId(), text: p.text, edited: false, user: true, field: null, quote: null };
-    });
-  }
+  const sections = applyEdits(existing?.sections, body);
   saveBrief(apptId, uid, sections, existing?.dropped ?? 0, "draft"); // any edit returns the brief to draft until re-confirmed
   res.json({ brief: loadBrief(apptId, uid) });
 });

@@ -121,11 +121,43 @@ test("refusal wording that mentions diagnosis is not over-filtered", async () =>
   assert.equal(r.data.safety, null);
 });
 
-test("provider requests point to Healthdirect, not invented providers", async () => {
+test("provider requests return verified search preferences and Fit Finder actions, never providers", async () => {
   const c = await user("find@example.com");
-  mock("Provider search in CarePath isn't available yet. You can use Healthdirect's service finder.", "find_provider");
-  const r = await c.call("POST", "/api/assistant/chat", say("find me a bulk billing GP in Macquarie Park"));
-  assert.deepEqual(r.data.actions, [{ label: "Healthdirect: Find a health service", href: "https://www.healthdirect.gov.au/australian-health-services", kind: "external" }]);
+  setAiClient({
+    async json(req) {
+      if (req.system.includes("search preferences")) {
+        return { items: [
+          { field: "category", value: "gp", quote: "GP" },
+          { field: "location", value: "Macquarie Park", quote: "around Macquarie Park" },
+          { field: "day", value: "weekend", quote: "on weekends" },
+          { field: "bulk_billing", value: "yes", quote: "bulk billing" },
+          { field: "language", value: "Mandarin", quote: "Mandarin" }, // not in the text -> dropped
+        ] };
+      }
+      return { reply: "Here are your preferences to check below.", intent: "find_provider" };
+    },
+  });
+  const r = await c.call("POST", "/api/assistant/chat", say("I'm looking for a GP around Macquarie Park, preferably on weekends, with bulk billing if available."));
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.data.actions.map((a: any) => a.href), ["/app/fit-finder", "https://www.healthdirect.gov.au/australian-health-services"]);
+  assert.deepEqual(r.data.search.prefs, { category: "gp", location: "Macquarie Park", days: ["sat", "sun"], bulk_billing: true });
+  assert.equal(r.data.search.dropped, 1);
+  assert.equal(r.data.search.location_known, true);
+});
+
+test("prepare conversations with enough detail offer to create a brief", async () => {
+  const c = await user("canbrief@example.com");
+  mock("Thanks — anything else you'd like to ask?", "prepare");
+  const short = await c.call("POST", "/api/assistant/chat", say("help me prepare"));
+  assert.ok(!short.data.actions.some((a: any) => a.kind === "create_brief"));
+  const opening = await c.call("POST", "/api/assistant/chat", say("I have an appointment coming up and want help organising what to discuss"));
+  assert.ok(!opening.data.actions.some((a: any) => a.kind === "create_brief"));
+  const detail = await c.call("POST", "/api/assistant/chat", { messages: [
+    { role: "user", content: "I have an appointment coming up and want help organising what to discuss" },
+    { role: "assistant", content: "Happy to help. What's the main concern?" },
+    { role: "user", content: "Headaches that started three weeks ago. I want to ask about screen time." },
+  ] });
+  assert.equal(detail.data.actions[0].kind, "create_brief");
 });
 
 test("malformed model output and missing key return clean errors", async () => {

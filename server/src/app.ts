@@ -12,8 +12,12 @@ import { prepRouter } from "./routes/prep.js";
 import { instructionsRouter, tasksRouter } from "./routes/tasks.js";
 import { aiInfo } from "./ai/client.js";
 import { assistantRouter } from "./routes/assistant.js";
+import { draftsRouter } from "./routes/drafts.js";
+import { fitFinderRouter } from "./routes/fit-finder.js";
+import { ensureDemoDirectory } from "./providers/demo-data.js";
 
 export function createApp() {
+  ensureDemoDirectory();
   const app = express();
   app.disable("x-powered-by");
   app.use(helmet());
@@ -28,6 +32,8 @@ export function createApp() {
   app.use("/api/appointments", appointmentsRouter);
   app.use("/api/tasks", tasksRouter);
   app.use("/api/assistant", assistantRouter);
+  app.use("/api/drafts", draftsRouter);
+  app.use("/api/fit-finder", fitFinderRouter);
   app.use("/api/dashboard", dashboardRouter);
   app.use("/api", (_req, res) => res.status(404).json({ error: "Not found" }));
 

@@ -97,3 +97,97 @@ CREATE INDEX IF NOT EXISTS idx_tasks_appt ON follow_up_tasks(appointment_id);
 // Lightweight forward migration for databases created before this column existed.
 const taskCols = db.prepare("PRAGMA table_info(follow_up_tasks)").all() as { name: string }[];
 if (!taskCols.some((c) => c.name === "clarification_reason")) db.exec("ALTER TABLE follow_up_tasks ADD COLUMN clarification_reason TEXT");
+
+// ---------- Draft briefs (preparation without an appointment) ----------
+db.exec(`
+CREATE TABLE IF NOT EXISTS draft_briefs (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  origin TEXT NOT NULL CHECK (origin IN ('chat','form')),
+  notes_json TEXT NOT NULL,
+  content_json TEXT,
+  created_at TEXT NOT NULL DEFAULT (${NOW}),
+  updated_at TEXT NOT NULL DEFAULT (${NOW})
+);
+CREATE INDEX IF NOT EXISTS idx_drafts_user ON draft_briefs(user_id, updated_at);
+`);
+
+// ---------- Fit Finder provider directory ----------
+// Every attribute row carries its source and an optional verified_at; NULL means "not verified".
+db.exec(`
+CREATE TABLE IF NOT EXISTS service_categories (
+  id TEXT PRIMARY KEY, name TEXT NOT NULL, sort INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS locations (
+  id TEXT PRIMARY KEY, suburb TEXT NOT NULL, state TEXT NOT NULL, postcode TEXT NOT NULL, lat REAL NOT NULL, lng REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_locations_suburb ON locations(suburb COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_locations_postcode ON locations(postcode);
+CREATE TABLE IF NOT EXISTS clinics (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  location_id TEXT NOT NULL REFERENCES locations(id),
+  address TEXT,
+  lat REAL NOT NULL, lng REAL NOT NULL,
+  phone TEXT,
+  is_fictional INTEGER NOT NULL DEFAULT 1,
+  data_source TEXT NOT NULL,
+  source_ref TEXT,
+  verified_at TEXT,
+  updated_at TEXT NOT NULL DEFAULT (${NOW})
+);
+CREATE INDEX IF NOT EXISTS idx_clinics_geo ON clinics(lat, lng);
+CREATE INDEX IF NOT EXISTS idx_clinics_location ON clinics(location_id);
+CREATE TABLE IF NOT EXISTS providers (
+  id TEXT PRIMARY KEY,
+  clinic_id TEXT NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+  display_name TEXT NOT NULL,
+  category_id TEXT NOT NULL REFERENCES service_categories(id),
+  is_fictional INTEGER NOT NULL DEFAULT 1,
+  data_source TEXT NOT NULL,
+  verified_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_providers_category ON providers(category_id, clinic_id);
+CREATE TABLE IF NOT EXISTS provider_attributes (
+  provider_id TEXT NOT NULL REFERENCES providers(id) ON DELETE CASCADE,
+  key TEXT NOT NULL CHECK (key IN ('language','telehealth','gender')),
+  value TEXT NOT NULL,
+  verified_at TEXT,
+  source TEXT NOT NULL,
+  PRIMARY KEY (provider_id, key, value)
+);
+CREATE TABLE IF NOT EXISTS clinic_hours (
+  clinic_id TEXT NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+  day INTEGER NOT NULL CHECK (day BETWEEN 0 AND 6),
+  opens_min INTEGER NOT NULL, closes_min INTEGER NOT NULL,
+  verified_at TEXT, source TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_hours_clinic ON clinic_hours(clinic_id, day);
+CREATE TABLE IF NOT EXISTS clinic_billing (
+  clinic_id TEXT NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+  category_id TEXT NOT NULL REFERENCES service_categories(id),
+  bulk_billing TEXT NOT NULL CHECK (bulk_billing IN ('all','some','none')),
+  details TEXT, verified_at TEXT, source TEXT NOT NULL,
+  PRIMARY KEY (clinic_id, category_id)
+);
+CREATE TABLE IF NOT EXISTS clinic_accessibility (
+  clinic_id TEXT NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+  feature TEXT NOT NULL CHECK (feature IN ('wheelchair','accessible_parking','hearing_loop','accessible_toilet')),
+  available INTEGER NOT NULL CHECK (available IN (0,1)),
+  verified_at TEXT, source TEXT NOT NULL,
+  PRIMARY KEY (clinic_id, feature)
+);
+CREATE TABLE IF NOT EXISTS booking_links (
+  clinic_id TEXT PRIMARY KEY REFERENCES clinics(id) ON DELETE CASCADE,
+  url TEXT NOT NULL, verified_at TEXT, source TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS saved_searches (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  prefs_json TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (${NOW})
+);
+CREATE INDEX IF NOT EXISTS idx_saved_searches_user ON saved_searches(user_id, created_at);
+`);
