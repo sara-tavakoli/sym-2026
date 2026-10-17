@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { createHash, randomBytes } from "node:crypto";
 import { z } from "zod";
+import rateLimit from "express-rate-limit";
 import { db } from "../db.js";
 import "../schema-circle.js";
 import { newId, requireAuth } from "../auth.js";
@@ -34,7 +35,7 @@ export function isHelper(ownerId: string, memberId: string) {
   return !!db.prepare("SELECT 1 FROM care_members WHERE owner_id = ? AND member_id = ? AND role = 'helper'").get(ownerId, memberId);
 }
 
-const quote = (title: string) => `'${title.length > 80 ? title.slice(0, 77) + "..." : title}'`;
+const quote = (title: string) => `“${title.length > 80 ? title.slice(0, 77) + "…" : title}”`; // same curly quotes as the seeded demo activity
 const userName = (id: string) => (db.prepare("SELECT name FROM users WHERE id = ?").get(id) as { name: string } | undefined)?.name ?? "someone";
 
 /** Hook for the patient's own task route: logs completion and assignment, but only once a circle exists. */
@@ -69,15 +70,21 @@ function findInvite(token: string) {
 }
 const inviteState = (i: InviteRow) => (i.cancelled_at ? "cancelled" : i.accepted_at ? "accepted" : i.expires_at <= now() ? "expired" : "pending");
 
+// Public invite endpoints are rate limited per IP, like the clinician share links.
+const joinLimiter = rateLimit({
+  windowMs: 15 * 60_000, limit: 60, standardHeaders: true, legacyHeaders: false,
+  message: { error: "Too many attempts. Please wait a few minutes and try again." },
+});
+
 // Anyone holding the link may see who sent it (the token is the secret); no emails are returned.
-circleRouter.get("/join/:token", (req, res) => {
+circleRouter.get("/join/:token", joinLimiter, (req, res) => {
   const parsed = tokenParam.safeParse(param(req, "token"));
   const inv = parsed.success ? findInvite(parsed.data) : undefined;
   if (!inv) return res.status(404).json({ error: "This invite link is not valid. Ask for a new one." });
   res.json({ owner_name: inv.owner_name, name: inv.name, role: inv.role, state: inviteState(inv), expires_at: inv.expires_at });
 });
 
-circleRouter.post("/join/:token", requireAuth, (req, res) => {
+circleRouter.post("/join/:token", joinLimiter, requireAuth, (req, res) => {
   const parsed = tokenParam.safeParse(param(req, "token"));
   const inv = parsed.success ? findInvite(parsed.data) : undefined;
   if (!inv) return res.status(404).json({ error: "This invite link is not valid. Ask for a new one." });

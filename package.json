@@ -21,7 +21,8 @@
     "ui-ai-features": "tsx server/scripts/ui-ai-features.ts",
     "ui-journey": "tsx server/scripts/ui-journey.ts",
     "ui-audit": "tsx server/scripts/ui-audit.ts",
-    "seed": "tsx --env-file-if-exists=.env server/scripts/seed.ts"
+    "seed": "tsx --env-file-if-exists=.env server/scripts/seed.ts",
+    "e2e": "tsx server/scripts/e2e-judge.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",

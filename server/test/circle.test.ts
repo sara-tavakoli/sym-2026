@@ -26,7 +26,7 @@ class Client {
     });
     const set = res.headers.get("set-cookie");
     if (set) this.cookie = set.split(";")[0];
-    return { status: res.status, data: (await res.json().catch(() => null)) as any };
+    return { status: res.status, headers: res.headers, data: (await res.json().catch(() => null)) as any };
   }
 }
 
@@ -76,6 +76,7 @@ test("invite -> accept -> supporter sees appointments and confirmed brief, never
 
   // Public lookup shows who sent it, without emails.
   const look = await new Client().call("GET", `/api/circle/join/${inv.token}`);
+  assert.ok(look.headers.get("ratelimit-policy") ?? look.headers.get("ratelimit-limit"), "public invite lookup is rate limited");
   assert.equal(look.status, 200);
   assert.equal(look.data.owner_name, "Rosa Patient");
   assert.equal(look.data.state, "pending");

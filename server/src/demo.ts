@@ -5,6 +5,7 @@ import { db } from "./db.js";
 import { SESSION_COOKIE, createSession, hashPassword, newId } from "./auth.js";
 import { saveBrief } from "./routes/prep.js";
 import type { ViewSections } from "./briefs.js";
+import { zonedParts, zonedToUtc } from "./import/tz.js";
 
 // One-click demo: every visitor gets a private, throwaway account seeded with FICTIONAL data,
 // so judges can click through real flows without colliding with each other. Accounts expire after 24 h.
@@ -17,8 +18,12 @@ const limiter = rateLimit({
   message: { error: "Too many demo accounts from this network. Please try again later." },
 });
 
-const at = (days: number, hour: number, minute = 0) => {
-  const d = new Date(); d.setDate(d.getDate() + days); d.setHours(hour, minute, 0, 0); return d.toISOString();
+// Wall-clock times in Sydney, not the server's zone: the host runs in UTC, which put "10:15am" visits at 9:15pm
+// for Australian visitors and pushed "tomorrow" out by a day.
+export const at = (days: number, hour: number, minute = 0, now = new Date()) => {
+  const t = zonedParts(now);
+  const d = new Date(Date.UTC(t.year, t.month - 1, t.day + days));
+  return zonedToUtc(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(), hour, minute).toISOString();
 };
 
 const point = (text: string, field: string, quote: string) => ({ id: newId(), text, edited: false, user: false, field, quote });
