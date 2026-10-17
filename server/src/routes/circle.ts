@@ -7,6 +7,7 @@ import "../schema-circle.js";
 import { newId, requireAuth } from "../auth.js";
 import { SECTIONS } from "../ai/brief.js";
 import { loadBrief } from "./prep.js";
+import { notifyCircleTask } from "../notifications.js";
 
 // Mounted at /api/circle (the patient managing their own circle, plus invite acceptance)
 // and /api/supporting (a member acting on someone else's circle).
@@ -292,5 +293,6 @@ supportingRouter.patch("/:ownerId/tasks/:taskId", (req, res) => {
     }
     db.exec("COMMIT");
   } catch (e) { db.exec("ROLLBACK"); throw e; }
+  notifyCircleTask(ownerId, uid, taskId, cur.title, { status: cur.status, assignee: cur.assignee_user_id }, { status, assignee });
   res.json(supportTask(taskId, ownerId));
 });

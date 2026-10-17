@@ -5,7 +5,8 @@ import { db } from "./db.js";
 import { SESSION_COOKIE, createSession, hashPassword, newId } from "./auth.js";
 import { saveBrief } from "./routes/prep.js";
 import type { ViewSections } from "./briefs.js";
-import { zonedParts, zonedToUtc } from "./import/tz.js";
+import { addDays, zonedParts, zonedToUtc } from "./import/tz.js";
+import { sydneyToday } from "./schema-followthrough.js";
 
 // One-click demo: every visitor gets a private, throwaway account seeded with FICTIONAL data,
 // so judges can click through real flows without colliding with each other. Accounts expire after 24 h.
@@ -71,16 +72,27 @@ export function seedDemo(uid: string, lockedHash: string) {
   const text = "Blood test (FBC and iron studies) within 5 days at any pathology collection centre.\nBook a review appointment with me in 2 weeks to go through results.\nTake iron supplement 1 tablet daily with food.\nStand up slowly and drink more water.\nCall the clinic soon if the dizziness gets worse.";
   const instr = newId();
   db.prepare("INSERT INTO visit_instructions (id, user_id, appointment_id, raw_text) VALUES (?,?,?,?)").run(instr, uid, past, text);
-  const task = db.prepare(`INSERT INTO follow_up_tasks (id, user_id, appointment_id, instruction_id, title, source_text, deadline, status, needs_clarification, clarification_reason)
-                           VALUES (?,?,?,?,?,?,?,?,?,?)`);
+  // Categories and daily date ranges are explicit so the follow-through tracker looks lived-in straight away.
+  const task = db.prepare(`INSERT INTO follow_up_tasks (id, user_id, appointment_id, instruction_id, title, source_text, deadline, status, needs_clarification, clarification_reason,
+                             category, duration_days, start_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`);
   const med = "Medication wording is shown exactly as entered. Confirm any details with your healthcare professional or pharmacist.";
-  const blood = newId(), review = newId();
-  task.run(blood, uid, past, instr, "Get blood test (FBC and iron studies)", "Blood test (FBC and iron studies) within 5 days at any pathology collection centre.", "within 5 days", "todo", 0, null);
-  task.run(review, uid, past, instr, "Book a review appointment", "Book a review appointment with me in 2 weeks to go through results.", "in 2 weeks", "completed", 0, null);
-  task.run(newId(), uid, past, instr, "Take iron supplement 1 tablet daily with food.", "Take iron supplement 1 tablet daily with food.", null, "in_progress", 1, med);
-  task.run(newId(), uid, past, instr, "Stand up slowly and drink more water", "Stand up slowly and drink more water.", null, "todo", 0, null);
-  task.run(newId(), uid, past, instr, "Call the clinic if dizziness gets worse", "Call the clinic soon if the dizziness gets worse.", null, "todo", 1, "\"Soon\" is unclear. Confirm with the clinic when you should call.");
+  const blood = newId(), review = newId(), iron = newId(), water = newId();
+  const today = sydneyToday();
+  task.run(blood, uid, past, instr, "Get blood test (FBC and iron studies)", "Blood test (FBC and iron studies) within 5 days at any pathology collection centre.", "within 5 days", "todo", 0, null, "follow_up", null, null);
+  task.run(review, uid, past, instr, "Book a review appointment", "Book a review appointment with me in 2 weeks to go through results.", "in 2 weeks", "completed", 0, null, "follow_up", null, null);
+  task.run(iron, uid, past, instr, "Take iron supplement 1 tablet daily with food.", "Take iron supplement 1 tablet daily with food.", null, "in_progress", 1, med, "daily", 14, addDays(today, -5));
+  task.run(water, uid, past, instr, "Stand up slowly and drink more water", "Stand up slowly and drink more water.", null, "in_progress", 0, null, "daily", 7, addDays(today, -2));
+  task.run(newId(), uid, past, instr, "Call the clinic if dizziness gets worse", "Call the clinic soon if the dizziness gets worse.", null, "todo", 1, "\"Soon\" is unclear. Confirm with the clinic when you should call.", "urgent", null, null);
+  // A few days already ticked; today's iron dose is left for the visitor to tick (which completes today's set).
+  const tick = db.prepare("INSERT INTO task_day_ticks (task_id, user_id, day) VALUES (?,?,?)");
+  for (const d of [-5, -4, -2, -1]) tick.run(iron, uid, addDays(today, d));
+  for (const d of [-2, -1, 0]) tick.run(water, uid, addDays(today, d));
   seedCircle(uid, { blood, review }, lockedHash);
+  // In-app notifications Alex hasn't read yet (the bell shows them on first load; the overdue blood test adds one more).
+  const note = db.prepare("INSERT INTO notifications (id, user_id, kind, message, link, created_at, read_at) VALUES (?,?,?,?,?,?,?)");
+  note.run(newId(), uid, "task_completed", "Mia completed ‘Book a review appointment’", `/app/appointments/${past}#follow-up`, ago(49), ago(48));
+  note.run(newId(), uid, "task_taken", "Mia took on ‘Get blood test (FBC and iron studies)’", `/app/appointments/${past}#follow-up`, ago(3), null);
+  note.run(newId(), uid, "brief_viewed", "Dr Priya Lee viewed your brief", `/app/appointments/${gp}`, ago(1), null);
   return { gp, past, dental };
 }
 

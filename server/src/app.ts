@@ -8,6 +8,7 @@ import "./db.js";
 import "./schema-circle.js";
 import "./schema-shares.js";
 import "./schema-nudges.js";
+import "./schema-followthrough.js";
 import { authRouter } from "./routes/auth.js";
 import { appointmentsRouter } from "./routes/appointments.js";
 import { dashboardRouter } from "./routes/dashboard.js";
@@ -23,6 +24,7 @@ import { ensureDemoDirectory } from "./providers/demo-data.js";
 import { demoRouter, purgeDemoAccounts } from "./demo.js";
 import { importRouter } from "./routes/import.js";
 import { attentionRouter } from "./routes/attention.js";
+import { notificationsRouter } from "./routes/notifications.js";
 
 export function createApp() {
   ensureDemoDirectory();
@@ -51,6 +53,7 @@ export function createApp() {
   app.use("/api/fit-finder", fitFinderRouter);
   app.use("/api/dashboard/attention", attentionRouter);
   app.use("/api/dashboard", dashboardRouter);
+  app.use("/api/notifications", notificationsRouter);
   app.use("/api/circle", circleRouter);
   app.use("/api/supporting", supportingRouter);
   app.use("/api/share", publicShareRouter);
