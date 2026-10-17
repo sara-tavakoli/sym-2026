@@ -174,7 +174,7 @@ test("regenerating one section keeps the others", async () => {
 });
 
 test("AI failures surface as clean errors", async () => {
-  setAiClient({ async json() { throw new AiError("The AI service is not reachable. Make sure Ollama is running.", 503); } });
+  setAiClient({ async json() { throw new AiError("The AI service is not reachable. Please try again.", 503); } });
   const { c, id } = await user("fail@example.com");
   await c.call("PUT", `/api/appointments/${id}/prep-notes`, input);
   const r = await c.call("POST", `/api/appointments/${id}/brief/generate`);

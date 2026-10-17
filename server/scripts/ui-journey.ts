@@ -1,4 +1,4 @@
-// End-to-end MVP journey through the real UI with the real local AI, on a fresh fictional account.
+// End-to-end MVP journey through the real UI with the real AI (Gemini; needs GEMINI_API_KEY), on a fresh fictional account.
 import { chromium } from "playwright-core";
 
 const base = process.env.BASE ?? "http://localhost:4000";

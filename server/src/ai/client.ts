@@ -1,9 +1,10 @@
+import { ApiError, GoogleGenAI } from "@google/genai";
 import type { ZodType } from "zod";
 
 /**
- * AI access is behind a small interface so the provider can be swapped (e.g. a hosted model later)
- * and tests can inject a deterministic client. The default provider is a LOCAL Ollama model:
- * no paid API, and health text never leaves the machine.
+ * AI access is behind a small interface so the provider can be swapped and tests can inject a
+ * deterministic client. The default provider is Google Gemini via the official @google/genai SDK.
+ * The API key is read on the server only and is never sent to the browser.
  */
 export interface AiRequest { system: string; user: string; schema: object }
 export interface AiClient { json(req: AiRequest, signal: AbortSignal): Promise<unknown> }
@@ -12,40 +13,68 @@ export class AiError extends Error {
   constructor(message: string, public status: number) { super(message); }
 }
 
-const OLLAMA_URL = process.env.OLLAMA_URL ?? "http://localhost:11434";
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "qwen3.5:9b";
-const TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS ?? 180_000);
-const MAX_CONCURRENT = Number(process.env.AI_MAX_CONCURRENT ?? 1);
-const MAX_QUEUE = Number(process.env.AI_MAX_QUEUE ?? 8);
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+const TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS ?? 60_000);
+const MAX_CONCURRENT = Number(process.env.AI_MAX_CONCURRENT ?? 4);
+const MAX_QUEUE = Number(process.env.AI_MAX_QUEUE ?? 20);
 
-const ollama: AiClient = {
-  async json({ system, user, schema }, signal) {
-    let res: Response;
-    try {
-      res = await fetch(`${OLLAMA_URL}/api/chat`, {
-        method: "POST", signal,
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          model: OLLAMA_MODEL, stream: false, think: false, format: schema,
-          options: { temperature: 0.1 }, keep_alive: "30m",
-          messages: [{ role: "system", content: system }, { role: "user", content: user }],
-        }),
-      });
-    } catch (e) {
-      if ((e as Error).name === "AbortError") throw e;
-      throw new AiError("The AI service is not reachable. Make sure Ollama is running.", 503);
-    }
-    if (!res.ok) throw new AiError("The AI service returned an error.", 502);
-    const data = (await res.json()) as { message?: { content?: string } };
-    return JSON.parse(data.message?.content ?? "");
-  },
-};
+/** The subset of the SDK we use; lets tests pass a fake without network access. */
+export interface GeminiModels {
+  generateContent(params: {
+    model: string;
+    contents: string;
+    config: Record<string, unknown>;
+  }): Promise<{ text?: string | undefined }>;
+}
 
-let client: AiClient = ollama;
-export const setAiClient = (c: AiClient) => { client = c; };
-export const aiInfo = () => ({ provider: "ollama (local)", model: OLLAMA_MODEL });
+export function createGeminiClient(models: GeminiModels, model = GEMINI_MODEL): AiClient {
+  return {
+    async json({ system, user, schema }, signal) {
+      let text: string | undefined;
+      try {
+        const res = await models.generateContent({
+          model,
+          contents: user,
+          config: {
+            systemInstruction: system,
+            temperature: 0.1,
+            responseMimeType: "application/json",
+            responseJsonSchema: schema,
+            abortSignal: signal,
+          },
+        });
+        text = res.text;
+      } catch (e) {
+        if (signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
+        if (e instanceof ApiError || typeof (e as { status?: unknown }).status === "number") {
+          const status = (e as { status: number }).status;
+          if (status === 429) throw new AiError("The AI service is busy right now. Please try again in a minute.", 429);
+          if (status === 401 || status === 403) throw new AiError("The AI service is not configured correctly.", 503);
+          if (status === 404) throw new AiError("The configured AI model is not available.", 503);
+          throw new AiError("The AI service returned an error.", 502);
+        }
+        throw new AiError("The AI service is not reachable. Please try again.", 503);
+      }
+      // Non-JSON output throws here and is retried once by generate().
+      return JSON.parse(text ?? "");
+    },
+  };
+}
 
-// Simple in-process queue: a small local model should not be hit by many parallel requests.
+// The SDK client is created lazily so the app (and every non-AI feature) starts without a key.
+let defaultClient: AiClient | null = null;
+function getDefaultClient(): AiClient {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new AiError("AI features are not configured on this server (missing GEMINI_API_KEY).", 503);
+  defaultClient ??= createGeminiClient(new GoogleGenAI({ apiKey }).models);
+  return defaultClient;
+}
+
+let override: AiClient | null = null;
+export const setAiClient = (c: AiClient | null) => { override = c; };
+export const aiInfo = () => ({ provider: "google-gemini", model: GEMINI_MODEL, configured: !!process.env.GEMINI_API_KEY || !!override });
+
+// Bounded in-process queue: caps concurrent paid requests per instance and sheds load when saturated.
 // Future path: replace with a durable job queue + workers (see docs/ARCHITECTURE.md).
 let running = 0;
 const waiting: (() => void)[] = [];
@@ -61,6 +90,7 @@ function release() {
 
 /** Calls the model, validates the result against a zod schema, and retries once if it is malformed. */
 export async function generate<T>(req: AiRequest, validator: ZodType<T>): Promise<T> {
+  const client = override ?? getDefaultClient();
   await acquire();
   try {
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -71,7 +101,7 @@ export async function generate<T>(req: AiRequest, validator: ZodType<T>): Promis
         const parsed = validator.safeParse(out);
         if (parsed.success) return parsed.data;
       } catch (e) {
-        if ((e as Error).name === "AbortError") throw new AiError("The AI took too long to respond. Please try again.", 504);
+        if ((e as Error).name === "AbortError" || ctrl.signal.aborted) throw new AiError("The AI took too long to respond. Please try again.", 504);
         if (e instanceof AiError) throw e;
         // JSON.parse failure etc.: fall through and retry once
       } finally { clearTimeout(timer); }

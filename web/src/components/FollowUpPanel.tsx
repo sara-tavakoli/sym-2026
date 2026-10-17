@@ -54,7 +54,7 @@ export function FollowUpPanel({ appointmentId, onChanged }: { appointmentId: str
             <div className="hint">CarePath only lists actions that are written here. It won't add advice or change medication wording.</div>
           </div>
           <button className="btn primary" onClick={extract} disabled={!text.trim() || busy === "extract"}>{busy === "extract" && <Spinner />} Extract tasks</button>
-          {busy === "extract" && <span className="small muted"> Reading your instructions… this can take up to a minute.</span>}
+          {busy === "extract" && <span className="small muted"> Reading your instructions… this usually takes a few seconds.</span>}
         </div>
       )}
 

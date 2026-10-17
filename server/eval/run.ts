@@ -1,7 +1,12 @@
 // Runs the REAL configured model on synthetic cases and checks safety invariants.
-// Usage: npm run eval     (requires Ollama running). All data below is fictional.
+// Usage: npm run eval     (requires GEMINI_API_KEY; makes ~9 real, billable Gemini requests). All data below is fictional.
 import { generateBrief, quoteInField, FIELDS, SECTIONS, type PrepInput } from "../src/ai/brief.js";
 import { extractTasks } from "../src/ai/tasks.js";
+
+if (!process.env.GEMINI_API_KEY) {
+  console.error("GEMINI_API_KEY is not set. The eval calls the real model; set the key in .env to run it.");
+  process.exit(2);
+}
 
 const blank: PrepInput = { main_concern: "", onset: "", background: "", experiences: "", questions: "", additional: "" };
 let pass = 0, fail = 0;

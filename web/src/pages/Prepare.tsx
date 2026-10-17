@@ -119,7 +119,7 @@ export default function Prepare() {
             </div>
           ))}
           <div className="row between">
-            <span className="small muted">{busy === "generate" ? "Generating… a local AI model can take up to a minute." : "Your notes are sent only to the AI model running on this server."}</span>
+            <span className="small muted">{busy === "generate" ? "Generating… this usually takes a few seconds." : "When you generate, your notes are sent to Google Gemini to be organised. Use fictional details only."}</span>
             <div className="row">
               {brief && <button type="button" className="btn" onClick={() => setStep(2)}>Back to brief</button>}
               <button className="btn primary" disabled={!hasNotes || busy === "generate"}>{busy === "generate" && <Spinner />} {brief ? "Regenerate brief" : "Generate brief"}</button>

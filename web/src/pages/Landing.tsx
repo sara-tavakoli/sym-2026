@@ -146,7 +146,7 @@ export default function Landing() {
               <article className="lp-feature">
                 <span className="lp-icon lp-icon-slate"><I d="lock" /></span>
                 <h3>Private by design</h3>
-                <p>Your records belong to your account only. The AI runs on CarePath's own server, and you can delete everything at any time.</p>
+                <p>Your records belong to your account only. Notes are sent to the AI only when you ask it to organise them, and you can delete everything at any time.</p>
               </article>
             </div>
           </div>
