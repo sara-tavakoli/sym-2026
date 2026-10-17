@@ -23,6 +23,7 @@ import { ensureDemoDirectory } from "./providers/demo-data.js";
 import { demoRouter, purgeDemoAccounts } from "./demo.js";
 import { importRouter } from "./routes/import.js";
 import { attentionRouter } from "./routes/attention.js";
+import { findCareRouter } from "./routes/find-care.js";
 
 export function createApp() {
   ensureDemoDirectory();
@@ -49,6 +50,7 @@ export function createApp() {
   app.use("/api/assistant", assistantRouter);
   app.use("/api/drafts", draftsRouter);
   app.use("/api/fit-finder", fitFinderRouter);
+  app.use("/api/find-care", findCareRouter);
   app.use("/api/dashboard/attention", attentionRouter);
   app.use("/api/dashboard", dashboardRouter);
   app.use("/api/circle", circleRouter);
