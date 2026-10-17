@@ -16,11 +16,16 @@
     "eval": "tsx --env-file-if-exists=.env server/eval/run.ts",
     "ui-smoke": "tsx server/scripts/ui-smoke.ts",
     "ui-assistant": "tsx server/scripts/ui-assistant.ts",
+    "ui-dashboard": "tsx server/scripts/ui-dashboard.ts",
+    "ui-fitfinder": "tsx server/scripts/ui-fitfinder.ts",
+    "ui-ai-features": "tsx server/scripts/ui-ai-features.ts",
     "ui-journey": "tsx server/scripts/ui-journey.ts",
     "seed": "tsx --env-file-if-exists=.env server/scripts/seed.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",
+    "@fontsource-variable/figtree": "^5.3.0",
+    "@fontsource-variable/source-serif-4": "^5.3.1",
     "@google/genai": "^2.30.0",
     "cookie-parser": "^1.4.7",
     "express": "^5.3.0",

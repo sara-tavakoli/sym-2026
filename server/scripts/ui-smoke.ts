@@ -34,7 +34,7 @@ for (const [label, viewport, scheme] of [["desktop-light", { width: 1280, height
   ok(`${label}: wrong password shows error`, true);
   await page.getByLabel("Password").fill("demo-password-1");
   await page.getByRole("button", { name: "Log in" }).click();
-  await page.getByRole("heading", { name: /Hello, Demo/ }).waitFor();
+  await page.getByRole("heading", { name: /(Good (morning|afternoon|evening)|Hello), Demo/ }).waitFor();
   await overflow("dashboard"); await page.waitForTimeout(450); await page.screenshot({ path: `${out}/${label}-dashboard.png`, fullPage: true });
 
   await page.goto(base + "/app/appointments?new=1");

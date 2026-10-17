@@ -22,7 +22,7 @@ export default function BriefPrint() {
   return (
     <div className="stack fade-in">
       <div className="row between no-print">
-        <Link to={`/app/appointments/${id}/prepare`} className="small">← Back to editing</Link>
+        <Link to={`/app/appointments/${id}/prepare`} className="back-link">← Back to editing</Link>
         <button className="btn primary" onClick={() => window.print()}>Print or save as PDF</button>
       </div>
       {brief.status !== "confirmed" && <div className="alert warn no-print">This brief is still a draft. Confirm it before taking it to your appointment.</div>}

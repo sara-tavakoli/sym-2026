@@ -6,7 +6,7 @@ import type { Server } from "node:http";
 process.env.DATABASE_PATH = ":memory:";
 delete process.env.GEMINI_API_KEY;
 const { setAiClient } = await import("../src/ai/client.js");
-const { screenEmergency, EMERGENCY_REPLY, SELF_HARM_REPLY, SAFE_FALLBACK } = await import("../src/ai/assistant.js");
+const { screenEmergency, isClinicalReply, EMERGENCY_REPLY, SELF_HARM_REPLY, SAFE_FALLBACK } = await import("../src/ai/assistant.js");
 
 let server: Server; let base = "";
 before(async () => {
@@ -123,18 +123,17 @@ test("refusal wording that mentions diagnosis is not over-filtered", async () =>
 
 test("provider requests return verified search preferences and Fit Finder actions, never providers", async () => {
   const c = await user("find@example.com");
+  let calls = 0;
   setAiClient({
-    async json(req) {
-      if (req.system.includes("search preferences")) {
-        return { items: [
-          { field: "category", value: "gp", quote: "GP" },
-          { field: "location", value: "Macquarie Park", quote: "around Macquarie Park" },
-          { field: "day", value: "weekend", quote: "on weekends" },
-          { field: "bulk_billing", value: "yes", quote: "bulk billing" },
-          { field: "language", value: "Mandarin", quote: "Mandarin" }, // not in the text -> dropped
-        ] };
-      }
-      return { reply: "Here are your preferences to check below.", intent: "find_provider" };
+    async json() {
+      calls++;
+      return { reply: "Here are your preferences to check below.", intent: "find_provider", preferences: [
+        { field: "category", value: "gp", quote: "GP" },
+        { field: "location", value: "Macquarie Park", quote: "around Macquarie Park" },
+        { field: "day", value: "weekend", quote: "on weekends" },
+        { field: "bulk_billing", value: "yes", quote: "bulk billing" },
+        { field: "language", value: "Mandarin", quote: "Mandarin" }, // not in the text -> dropped
+      ] };
     },
   });
   const r = await c.call("POST", "/api/assistant/chat", say("I'm looking for a GP around Macquarie Park, preferably on weekends, with bulk billing if available."));
@@ -143,6 +142,7 @@ test("provider requests return verified search preferences and Fit Finder action
   assert.deepEqual(r.data.search.prefs, { category: "gp", location: "Macquarie Park", days: ["sat", "sun"], bulk_billing: true });
   assert.equal(r.data.search.dropped, 1);
   assert.equal(r.data.search.location_known, true);
+  assert.equal(calls, 1, "reply and preferences come from a single model call");
 });
 
 test("prepare conversations with enough detail offer to create a brief", async () => {
@@ -179,6 +179,17 @@ test("conversations are not stored in the database", async () => {
   for (const t of tables) {
     const rows = db.prepare(`SELECT * FROM ${t}`).all();
     assert.ok(!JSON.stringify(rows).includes("UNIQUE-FICTIONAL-MARKER"), `found in ${t}`);
+  }
+});
+
+test("clinical-reply filter: catches diagnoses, ignores everyday phrasing", () => {
+  for (const bad of ["It sounds like a migraine.", "That sounds like you have an ear infection.", "It looks like it could be a viral infection.",
+    "You may have anxiety.", "Take 500mg twice a day.", "This is usually caused by stress.", "I'd suggest taking ibuprofen.", "It seems like tension headaches."]) {
+    assert.ok(isClinicalReply(bad), bad);
+  }
+  for (const fine of ["It sounds like you have a clear idea of what you want to talk about.", "That sounds like a good plan!", "It looks like you have an appointment on Friday.",
+    "It seems like a lot to keep track of.", "I can't diagnose, but I can help you write questions.", "Sounds like a great list of questions."]) {
+    assert.ok(!isClinicalReply(fine), fine);
   }
 });
 

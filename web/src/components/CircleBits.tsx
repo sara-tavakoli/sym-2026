@@ -32,22 +32,22 @@ export function CircleCard() {
   useEffect(() => { api.get<CircleSummary>("/circle/summary").then(setS).catch(() => {}); }, []);
   if (!s) return null;
   return (
-    <section className="card" aria-labelledby="cc">
-      <div className="card-head"><h2 id="cc">Your care circle</h2><Link to="/app/circle" className="small">Manage</Link></div>
+    <section className="panel section-pad" aria-labelledby="cc">
+      <div className="panel-head"><h2 id="cc">Your care circle</h2><Link to="/app/circle" className="panel-link">Manage</Link></div>
       {s.members === 0 && s.pending_invites === 0 ? (
-        <div className="row between">
-          <p className="muted small" style={{ margin: 0, flex: "1 1 240px" }}>Invite a family member or carer to see your appointments and help with follow-up tasks.</p>
+        <div className="panel-empty">
+          <p className="muted">Invite a family member or carer to see your appointments and help with follow-up tasks.</p>
           <Link className="btn sm" to="/app/circle"><Icon name="people" /> Invite someone</Link>
         </div>
       ) : (
-        <div className="stats circle-stats">
-          <div className="stat"><b>{s.members}</b><span>{s.members === 1 ? "Person" : "People"} in your circle</span></div>
-          <div className="stat"><b>{s.tasks_taken}</b><span>Open tasks they've taken on</span></div>
-          {s.pending_invites > 0 && <div className="stat"><b>{s.pending_invites}</b><span>Invites waiting</span></div>}
-        </div>
+        <ul className="overview">
+          <li><Link to="/app/circle"><span className="glance-n">{s.members}</span><span className="glance-l">{s.members === 1 ? "person" : "people"} in your circle</span></Link></li>
+          <li><Link to="/app/follow-up"><span className="glance-n">{s.tasks_taken}</span><span className="glance-l">open {s.tasks_taken === 1 ? "task" : "tasks"} they've taken on</span></Link></li>
+          {s.pending_invites > 0 && <li><Link to="/app/circle"><span className="glance-n">{s.pending_invites}</span><span className="glance-l">{s.pending_invites === 1 ? "invite" : "invites"} waiting</span></Link></li>}
+        </ul>
       )}
       {s.supporting > 0 && (
-        <p className="small" style={{ margin: ".75rem 0 0" }}>You're also supporting {s.supporting} {s.supporting === 1 ? "person" : "people"}. <Link to="/app/supporting">Open People I support</Link></p>
+        <p className="panel-foot">You're also supporting {s.supporting} {s.supporting === 1 ? "person" : "people"}. <Link to="/app/supporting">Open People I support</Link></p>
       )}
     </section>
   );

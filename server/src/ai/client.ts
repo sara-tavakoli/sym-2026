@@ -16,6 +16,9 @@ export class AiError extends Error {
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
+// These are short structured tasks whose output is verified server-side, so deep reasoning isn't needed.
+// LOW thinking measured noticeably faster and more consistent than the model default; "default" disables the override.
+const THINKING_LEVEL = (process.env.GEMINI_THINKING_LEVEL || "low").toUpperCase();
 const TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS ?? 60_000);
 const MAX_CONCURRENT = Number(process.env.AI_MAX_CONCURRENT ?? 4);
 const MAX_QUEUE = Number(process.env.AI_MAX_QUEUE ?? 20);
@@ -42,7 +45,9 @@ export function createGeminiClient(models: GeminiModels, model = GEMINI_MODEL): 
             temperature: 0.1,
             responseMimeType: "application/json",
             responseJsonSchema: schema,
+            maxOutputTokens: 4096, // bounds runaway output; real responses are a few hundred tokens
             abortSignal: signal,
+            ...(THINKING_LEVEL !== "DEFAULT" ? { thinkingConfig: { thinkingLevel: THINKING_LEVEL } } : {}),
           },
         });
         text = res.text;
@@ -50,7 +55,11 @@ export function createGeminiClient(models: GeminiModels, model = GEMINI_MODEL): 
         if (signal.aborted) throw Object.assign(new Error("aborted"), { name: "AbortError" });
         if (e instanceof ApiError || typeof (e as { status?: unknown }).status === "number") {
           const status = (e as { status: number }).status;
-          if (status === 429) throw new AiError("The AI service is busy right now. Please try again in a minute.", 429);
+          if (status === 429) {
+            // Distinguish an exhausted daily quota (won't clear in a minute) from short-term rate limiting.
+            if (/PerDay/i.test(String((e as Error).message))) throw new AiError("The AI's daily usage limit has been reached. AI features will be available again later — everything else still works.", 429);
+            throw new AiError("The AI service is busy right now. Please try again in a minute.", 429);
+          }
           if (status === 401 || status === 403) throw new AiError("The AI service is not configured correctly.", 503);
           if (status === 404) throw new AiError("The configured AI model is not available.", 503);
           throw new AiError("The AI service returned an error.", 502);

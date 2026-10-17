@@ -1,6 +1,13 @@
 # CarePath AI
 
-Better prepared. Better organised. Better care. An organisational tool for medical appointments — **not** a medical service. Demo use only: fictional data.
+Better prepared. Better organised. Better care. An organisational and navigation tool for healthcare appointments — **not** a medical service. Demo use only: fictional data.
+
+## Features
+- **Appointments** — your own records of appointments (nothing is booked with providers).
+- **CarePath AI Assistant** (dashboard + its own page) — conversational help preparing for appointments and describing what kind of service you need. Never diagnoses or recommends treatment; emergencies get fixed 000 guidance.
+- **AI Preparation** — turn your own notes, or an assistant conversation, into an editable, source-linked brief. Drafts can exist before an appointment and be attached later.
+- **Fit Finder** — find and compare healthcare services by practical needs (location, published hours, telehealth, accessibility, verified billing, language). Deterministic, explainable matching; "Not verified" is never treated as a match. Natural-language requests are turned into editable filters. **The provider directory is fictional demo data.**
+- **Follow-Up Tracker** — turn clinician instructions into a reviewed checklist.
 
 **One loop around every appointment** booked on HotDoc:
 1. **Before:** import the booking confirmation, then turn your own notes into a one-page brief where every point is traced to what you wrote.
@@ -26,6 +33,8 @@ npm run typecheck
 npm run seed       # fictional demo account: demo@carepath.example / demo-password-1
 npm run eval       # real-model safety eval on synthetic cases (needs GEMINI_API_KEY; ~9 billable requests)
 npm run ui-smoke   # Edge/Playwright UI checks, desktop + mobile, light + dark (server must be running + seeded)
+npm run ui-fitfinder # Fit Finder, comparison, saved searches and draft briefs in the browser (no AI calls)
+npm run ui-ai-features # chat -> brief -> attach, assistant -> Fit Finder handoff, NL search (~8 Gemini calls)
 npm run ui-assistant # dashboard AI Assistant in the browser with real AI (~5 Gemini calls; needs GEMINI_API_KEY)
 npm run ui-journey # full MVP journey through the UI with real AI on a fresh account (needs GEMINI_API_KEY)
 ```
@@ -49,6 +58,9 @@ Deployed on Railway from the `Dockerfile` (one container serves the API and the 
 1. Attach a persistent volume at `/data` (the image sets `DATABASE_PATH=/data/carepath.db`, `NODE_ENV=production`, `TRUST_PROXY=1`).
 2. Set secrets in the platform, never in the repo: `GEMINI_API_KEY` and/or `ANTHROPIC_API_KEY` (with both, Claude is the automatic fallback; `AI_PROVIDER=claude` makes it primary). Optional: `GEMINI_MODEL`, `CLAUDE_MODEL`, the `AI_*` limits.
 3. Serve over HTTPS (cookies are `Secure` in production). No local model or GPU is required.
+
+## Gemini quota
+A free-tier Gemini key is limited to **20 requests per day per model**. That is enough for a few manual checks, not for a demo or multiple users. Use a billing-enabled project for anything beyond that. When the quota is exhausted the app says so ("daily usage limit reached") and every non-AI feature keeps working. Approximate cost per action: assistant message 1 request, brief from chat 2, brief from notes 1, task extraction 1, natural-language search 1.
 
 ## Privacy note
 When a user generates a brief or extracts tasks, that text is sent to Google's Gemini API. Use fictional data only. Google's terms differ by tier: on the free tier, submitted content may be used to improve Google's products; on paid (billing-enabled) projects it is not used for that purpose. Use a paid project for anything beyond a demo, and review Google's current terms.

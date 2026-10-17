@@ -131,10 +131,10 @@ demoRouter.post("/", limiter, async (_req, res) => {
   const id = newId();
   const email = `visitor-${randomBytes(5).toString("hex")}@${DEMO_DOMAIN}`;
   db.prepare("INSERT INTO users (id, email, name, password_hash) VALUES (?,?,?,?)")
-    .run(id, email, "Alex (demo)", await hashPassword(randomBytes(24).toString("hex")));
+    .run(id, email, "Alex Morgan", await hashPassword(randomBytes(24).toString("hex")));
   // Companion accounts get a hash of a discarded random password, so nobody can sign in as them.
   seedDemo(id, await hashPassword(randomBytes(24).toString("hex")));
   const { token, expires } = createSession(id);
   res.cookie(SESSION_COOKIE, token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", expires, path: "/" });
-  res.status(201).json({ user: { id, email, name: "Alex (demo)" } });
+  res.status(201).json({ user: { id, email, name: "Alex Morgan" } });
 });

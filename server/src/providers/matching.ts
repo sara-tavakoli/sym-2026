@@ -49,7 +49,7 @@ export const fmtTime = (m: number) => {
   const h = Math.floor(m / 60), mm = m % 60, ap = h >= 12 ? "pm" : "am", h12 = h % 12 || 12;
   return mm ? `${h12}:${String(mm).padStart(2, "0")} ${ap}` : `${h12} ${ap}`;
 };
-const dateOnly = (iso: string | null) => (iso ? iso.slice(0, 10) : null);
+const dateOnly = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : null);
 
 export function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   const R = 6371, toRad = (d: number) => (d * Math.PI) / 180;

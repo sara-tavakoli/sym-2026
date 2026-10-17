@@ -1,6 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import "@fontsource-variable/figtree";
+import "@fontsource-variable/source-serif-4/opsz.css";
 import "./styles.css";
 import { AppProvider, useApp } from "./lib/app-context";
 import { Layout } from "./components/Layout";
@@ -22,6 +24,8 @@ import SupportingList, { SupportingDetail } from "./pages/Supporting";
 import Join from "./pages/Join";
 import ClinicianView from "./pages/ClinicianView";
 import FitFinder from "./pages/FitFinder";
+import DraftBrief from "./pages/DraftBrief";
+import Compare from "./pages/Compare";
 
 function Protected() {
   const { user, loading } = useApp();
@@ -47,8 +51,10 @@ createRoot(document.getElementById("root")!).render(
             <Route path="appointments/:id/prepare" element={<Prepare />} />
             <Route path="appointments/:id/brief" element={<BriefPrint />} />
             <Route path="assistant" element={<AssistantPage />} />
-            <Route path="fit-finder" element={<FitFinder />} />
             <Route path="preparation" element={<PrepList />} />
+            <Route path="drafts/:id" element={<DraftBrief />} />
+            <Route path="fit-finder" element={<FitFinder />} />
+            <Route path="fit-finder/compare" element={<Compare />} />
             <Route path="follow-up" element={<FollowUp />} />
             <Route path="settings" element={<Settings />} />
             <Route path="circle" element={<CareCircle />} />

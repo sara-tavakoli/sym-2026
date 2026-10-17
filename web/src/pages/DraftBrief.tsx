@@ -81,7 +81,7 @@ export default function DraftBrief() {
 
   return (
     <div className="stack fade-in">
-      <Link to="/app/preparation" className="small">← AI Preparation</Link>
+      <Link to="/app/preparation" className="back-link">← AI Preparation</Link>
       <div className="page-head">
         <div style={{ flex: 1, minWidth: 260 }}>
           <span className="badge info">{fromChat ? "Draft · from your assistant conversation" : "Draft · not attached to an appointment"}</span>
@@ -89,7 +89,7 @@ export default function DraftBrief() {
           <input id="draft-title" className="title-input" value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)} />
           <p className="muted small">Saved {fmtDateTime(d.updated_at)}. Attach it to an appointment whenever you're ready.</p>
         </div>
-        <button className="btn danger" onClick={() => setConfirmDelete(true)}>Delete draft</button>
+        <button className="btn ghost danger" onClick={() => setConfirmDelete(true)}>Delete draft</button>
       </div>
       {error && <div className="alert error" role="alert">{error}</div>}
 

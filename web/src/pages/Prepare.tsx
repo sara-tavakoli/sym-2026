@@ -77,7 +77,7 @@ export default function Prepare() {
   const stepNames = ["Your notes", "Review brief", "Confirmed"];
   return (
     <div className="stack fade-in">
-      <Link to={`/app/appointments/${id}`} className="small">← {appt.practitioner_name} · {fmtDateTime(appt.starts_at)}</Link>
+      <Link to={`/app/appointments/${id}`} className="back-link">← {appt.practitioner_name} · {fmtDateTime(appt.starts_at)}</Link>
       <div className="page-head"><div><h1>Prepare for your appointment</h1>
         <p className="muted">Write in your own words. CarePath organises what you wrote — it never adds medical information.</p></div></div>
 

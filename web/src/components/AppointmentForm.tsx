@@ -6,9 +6,10 @@ import { sourceHint, type ImportFieldKey, type ImportResult } from "../lib/booki
 
 const SERVICES = ["General Practitioner (GP)", "Dentist", "Physiotherapy", "Psychology / Counselling", "Optometry", "Dermatology", "Specialist", "Pathology / Imaging", "Other"];
 
-export type AppointmentPrefill = Partial<Pick<Appointment, "practitioner_name" | "service_type" | "clinic_name" | "location">>;
+type Seed = Partial<Pick<Appointment, "practitioner_name" | "service_type" | "clinic_name" | "location" | "purpose">>;
 
-export function AppointmentForm({ existing, prefill, onSaved, onClose, startWithImport }: { existing?: Appointment; prefill?: AppointmentPrefill; onSaved: (a: Appointment) => void; onClose: () => void; startWithImport?: boolean }) {
+export function AppointmentForm({ existing, initial, onSaved, onClose, startWithImport }: { existing?: Appointment; initial?: Seed; onSaved: (a: Appointment) => void; onClose: () => void; startWithImport?: boolean }) {
+  // Values pre-filled when creating: an imported booking confirmation wins over a Fit Finder result; editing always uses the stored record.
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -56,23 +57,24 @@ export function AppointmentForm({ existing, prefill, onSaved, onClose, startWith
             <input name="when" type="datetime-local" required defaultValue={existing ? toLocalInput(existing.starts_at) : pv("starts_at") ? toLocalInput(pv("starts_at")!) : ""} aria-invalid={!!fieldErrors.when} />
           </Field>
           <Field label="Practitioner name *" error={fieldErrors.practitioner_name} hint={hint("practitioner_name")}>
-            <input name="practitioner_name" required maxLength={120} placeholder="e.g. Dr Example" defaultValue={existing?.practitioner_name ?? pv("practitioner_name") ?? prefill?.practitioner_name} aria-invalid={!!fieldErrors.practitioner_name} />
+            <input name="practitioner_name" required maxLength={120} placeholder="e.g. Dr Example" defaultValue={existing?.practitioner_name ?? pv("practitioner_name") ?? initial?.practitioner_name} aria-invalid={!!fieldErrors.practitioner_name} />
           </Field>
           <Field label="Service type *" error={fieldErrors.service_type} hint={hint("service_type")}>
-            <select name="service_type" required defaultValue={existing?.service_type ?? importedService ?? (prefill?.service_type && SERVICES.includes(prefill.service_type) ? prefill.service_type : SERVICES[0])}>
+            <select name="service_type" required defaultValue={existing?.service_type ?? importedService ?? initial?.service_type ?? SERVICES[0]}>
               {existing && !SERVICES.includes(existing.service_type) && <option>{existing.service_type}</option>}
               {!existing && importedService && !SERVICES.includes(importedService) && <option>{importedService}</option>}
+              {!existing && !importedService && initial?.service_type && !SERVICES.includes(initial.service_type) && <option>{initial.service_type}</option>}
               {SERVICES.map((s) => <option key={s}>{s}</option>)}
             </select>
           </Field>
           <Field label="Clinic name *" error={fieldErrors.clinic_name} hint={hint("clinic_name")}>
-            <input name="clinic_name" required maxLength={120} placeholder="e.g. Campus Health Clinic" defaultValue={existing?.clinic_name ?? pv("clinic_name") ?? prefill?.clinic_name} aria-invalid={!!fieldErrors.clinic_name} />
+            <input name="clinic_name" required maxLength={120} placeholder="e.g. Campus Health Clinic" defaultValue={existing?.clinic_name ?? pv("clinic_name") ?? initial?.clinic_name} aria-invalid={!!fieldErrors.clinic_name} />
           </Field>
           <Field label="Location (optional)" hint={hint("location")}>
-            <input name="location" maxLength={200} placeholder="Address or suburb" defaultValue={existing?.location ?? pv("location")?.slice(0, 200) ?? prefill?.location ?? ""} />
+            <input name="location" maxLength={200} placeholder="Address or suburb" defaultValue={existing?.location ?? pv("location")?.slice(0, 200) ?? initial?.location ?? ""} />
           </Field>
           <Field label="Purpose (optional)" hint={hint("purpose") ?? "A short reason, e.g. “Routine check-up”"} full>
-            <input name="purpose" maxLength={500} defaultValue={existing?.purpose ?? pv("purpose") ?? ""} />
+            <input name="purpose" maxLength={500} defaultValue={existing?.purpose ?? pv("purpose") ?? initial?.purpose ?? ""} />
           </Field>
         </div>
         <div className="row" style={{ justifyContent: "flex-end" }}>
