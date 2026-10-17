@@ -72,6 +72,7 @@ export interface Task {
   id: string; appointment_id: string; title: string; source_text: string; deadline: string | null; status: TaskStatus;
   needs_clarification: number; clarification_reason: string | null; notes: string | null; created_at: string; updated_at: string;
   practitioner_name?: string; starts_at?: string;
+  assignee_user_id?: string | null; assignee_name?: string | null; // care circle
 }
 export interface ProposedTask {
   title: string; source_text: string; deadline: string | null; needs_clarification: boolean; clarification_reason: string | null; is_medication: boolean; notes?: string;

@@ -2,15 +2,17 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError, STATUS_LABELS, type Task, type TaskStatus } from "../lib/api";
 import { useApp } from "../lib/app-context";
+import { useHelpers } from "../lib/circle";
 
 export function TaskCard({ task, onChange, onDelete, showAppointment }: { task: Task; onChange: (t: Task) => void; onDelete: (id: string) => void; showAppointment?: boolean }) {
-  const { notify } = useApp();
+  const { notify, user } = useApp();
+  const helpers = useHelpers(user?.id);
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
   const [deadline, setDeadline] = useState(task.deadline ?? "");
   const [notes, setNotes] = useState(task.notes ?? "");
 
-  async function patch(body: Partial<Pick<Task, "title" | "notes" | "deadline" | "status">>) {
+  async function patch(body: Partial<Pick<Task, "title" | "notes" | "deadline" | "status" | "assignee_user_id">>) {
     try { onChange(await api.patch<Task>(`/tasks/${task.id}`, body)); return true; }
     catch (e) { notify(e instanceof ApiError ? e.message : "Could not save", "error"); return false; }
   }
@@ -43,7 +45,16 @@ export function TaskCard({ task, onChange, onDelete, showAppointment }: { task: 
       <div className="meta">
         {task.deadline && !editing && <span className="badge info">Due: {task.deadline}</span>}
         {task.needs_clarification ? <span className="badge warn" title={task.clarification_reason ?? ""}>Confirm with your healthcare professional</span> : null}
-        {showAppointment && task.practitioner_name && <Link className="small" to={`/app/appointments/${task.appointment_id}`}>{task.practitioner_name}</Link>}
+        {task.assignee_name && <span className="badge ok">Assigned to {task.assignee_name}</span>}
+        {(helpers.length > 0 || task.assignee_user_id) && (
+          <select aria-label={`Who is doing "${task.title}"`} style={{ width: "auto", minHeight: 36, padding: "0 .5rem" }} value={task.assignee_user_id ?? ""}
+            onChange={(e) => patch({ assignee_user_id: e.target.value || null })}>
+            <option value="">Me</option>
+            {helpers.map((h) => <option key={h.member_id} value={h.member_id}>{h.name}</option>)}
+            {task.assignee_user_id && !helpers.some((h) => h.member_id === task.assignee_user_id) && <option value={task.assignee_user_id}>{task.assignee_name ?? "Circle member"}</option>}
+          </select>
+        )}
+        {showAppointment && task.practitioner_name &&<Link className="small" to={`/app/appointments/${task.appointment_id}`}>{task.practitioner_name}</Link>}
         {!editing && <button className="btn sm ghost" onClick={() => setEditing(true)}>Edit</button>}
         <button className="btn sm ghost danger" onClick={remove}>Delete</button>
       </div>

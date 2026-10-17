@@ -5,6 +5,7 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { ZodError } from "zod";
 import "./db.js";
+import "./schema-circle.js";
 import { authRouter } from "./routes/auth.js";
 import { appointmentsRouter } from "./routes/appointments.js";
 import { dashboardRouter } from "./routes/dashboard.js";
@@ -14,6 +15,7 @@ import { aiInfo } from "./ai/client.js";
 import { assistantRouter } from "./routes/assistant.js";
 import { draftsRouter } from "./routes/drafts.js";
 import { fitFinderRouter } from "./routes/fit-finder.js";
+import { circleRouter, supportingRouter } from "./routes/circle.js";
 import { ensureDemoDirectory } from "./providers/demo-data.js";
 import { demoRouter, purgeDemoAccounts } from "./demo.js";
 
@@ -41,6 +43,8 @@ export function createApp() {
   app.use("/api/drafts", draftsRouter);
   app.use("/api/fit-finder", fitFinderRouter);
   app.use("/api/dashboard", dashboardRouter);
+  app.use("/api/circle", circleRouter);
+  app.use("/api/supporting", supportingRouter);
   app.use("/api", (_req, res) => res.status(404).json({ error: "Not found" }));
 
   // Serve the built frontend (single deployable). Unknown paths fall back to the SPA shell.
