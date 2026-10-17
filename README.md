@@ -28,8 +28,8 @@ Dev mode: `npm run dev:server` and `npm run dev:web` (Vite on :5173 proxies `/ap
 - **Authorisation:** every query filters on `user_id`; other users' records return 404.
 
 ## Scalability: implemented vs proposed
-Implemented: server-side persistence, per-user data isolation, composite indexes `(user_id, starts_at)` etc., paginated appointment history, stateless request handling, auth rate limiting.
-Proposed (not built, not load-tested): move SQLite to PostgreSQL, move AI generation to a job queue with workers, per-user AI rate limits and timeouts (Phase 2), horizontal API scaling behind a load balancer, shared rate-limit store. **No load testing has been performed.**
+Implemented: server-side persistence, per-user data isolation, composite indexes, pagination (appointments, tasks), stateless request handling, per-user AI rate limit, AI request timeout, bounded AI queue, auth rate limiting.
+Proposed (not built, not load-tested): PostgreSQL, a durable AI job queue with workers, scaled inference, Redis for shared rate limits, load balancing. **No load testing has been performed.** Details: docs/ARCHITECTURE.md.
 
 ## Docs
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — architecture, AI safety design, scalability (implemented vs proposed)
