@@ -15,7 +15,7 @@ const nav: NavItem[] = [
   { to: "/app/assistant", label: "AI Assistant", short: "Assistant", icon: "chat" },
   { to: "/app/preparation", label: "AI Preparation", short: "Prepare", icon: "sparkle" },
   { to: "/app/find-care", label: "Find care", short: "Find care", icon: "check" },
-  { to: "/app/fit-finder", label: "Fit Finder", short: "Find", icon: "search" },
+  { to: "/app/fit-finder", label: "Fit Finder", short: "Fit Finder", icon: "search" },
 ];
 const MOBILE = ["/app", "/app/appointments", "/app/assistant", "/app/fit-finder", "/app/follow-up"];
 
@@ -39,7 +39,7 @@ export function Layout() {
           {/* Header actions: other features (e.g. a notification bell) mount at the start of this group. */}
           <div className="header-actions">
             <NotificationBell />
-            <NavLink to="/app/preparation" className="icon-link mobile-only" aria-label="AI Preparation" title="AI Preparation"><Icon name="sparkle" /></NavLink>
+            <NavLink to="/app/preparation" className="icon-link mobile-only hide-xs" aria-label="AI Preparation" title="AI Preparation"><Icon name="sparkle" /></NavLink>
             <NavLink to="/app/circle" className="icon-link mobile-only" aria-label="Care circle" title="Care circle"><Icon name="people" /></NavLink>
             <NavLink to="/app/settings" className="icon-link" aria-label="Settings" title="Settings"><Icon name="gear" /></NavLink>
             <span className="user-chip" title={user?.email}>

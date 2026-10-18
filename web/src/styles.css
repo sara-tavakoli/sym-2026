@@ -172,7 +172,10 @@ strong, b { font-weight: 650; }
 .bottomnav { display: none; }
 .icon-link.mobile-only { display: none; }
 @media (max-width: 820px) { .icon-link.mobile-only { display: inline-grid; } }
-@media (max-width: 1279px) { .nav-full { display: none; } .nav-short { display: inline; } .topnav a { padding: .5rem .7rem; } }
+/* Small phones: the notification bell takes the place of the AI Preparation shortcut (Prepare is on every appointment). */
+@media (max-width: 440px) { .icon-link.mobile-only.hide-xs { display: none; } .header-actions { gap: .2rem; } }
+@media (max-width: 1499px) { .nav-full { display: none; } .nav-short { display: inline; } .topnav a { padding: .5rem .65rem; } }
+@media (max-width: 1279px) { .topnav a svg { display: none; } }
 @media (max-width: 1023px) { .topnav a svg { display: none; } .user-name { display: none; } }
 @media (max-width: 820px) {
   .wrap { padding: 0 16px; }
@@ -1090,3 +1093,6 @@ span.task-check { width: 0; }
 .auth-wrap .disclaimer { background: rgba(23,46,39,.45); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-color: rgba(255,255,255,.2); color: #D1E7DF; }
 .auth-wrap .disclaimer strong { color: #fff; }
 .auth-wrap .disclaimer a { color: #A7F3D0; }
+
+/* Links inside the dark assistant band need the light highlight colour to stay readable. */
+.assist-band .fine a { color: var(--highlight); font-weight: 600; }
