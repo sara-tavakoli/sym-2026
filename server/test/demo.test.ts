@@ -75,3 +75,27 @@ test("demo appointment times are Sydney wall-clock times whatever the server's t
   assert.equal(zonedDate(new Date(iso)), "2026-10-20");
   assert.deepEqual([p.hour, p.minute], [16, 0]);
 });
+
+test("the demo shows follow-through: categories, a daily calendar with past ticks, and unread notifications", async () => {
+  const r = await call("", "POST", "/api/demo");
+  const tasks = (await call(r.cookie, "GET", "/api/tasks?status=all&pageSize=50")).data;
+  const by = (s: string) => tasks.items.find((t: { source_text: string }) => t.source_text.startsWith(s));
+  const iron = by("Take iron supplement");
+  assert.equal(iron.category, "daily");
+  assert.equal(iron.duration_days, 14);
+  assert.equal(iron.title, "Take iron supplement 1 tablet daily with food."); // medication wording unchanged
+  assert.equal(iron.needs_clarification, 1);
+  assert.ok(iron.ticks.length >= 3 && iron.ticks.every((d: string) => d < tasks.today), "a few past days ticked, today left to tick");
+  assert.equal(by("Call the clinic soon").category, "urgent");
+  assert.equal(by("Blood test").category, "follow_up");
+  assert.equal(by("Book a review").category, "follow_up");
+  assert.equal(by("Stand up slowly").category, "daily");
+  assert.ok(by("Stand up slowly").ticks.includes(tasks.today));
+  // Ticking today's iron dose is allowed.
+  const tick = await fetch(`${base}/api/tasks/${iron.id}/days`, { method: "POST", headers: { "content-type": "application/json", cookie: r.cookie }, body: JSON.stringify({ day: tasks.today, done: true }) });
+  assert.equal(tick.status, 200);
+  const notes = (await call(r.cookie, "GET", "/api/notifications")).data;
+  assert.ok(notes.unread >= 2);
+  assert.ok(notes.items.some((n: { message: string }) => n.message.startsWith("Mia took on")));
+  assert.ok(notes.items.some((n: { message: string }) => n.message === "Dr Priya Lee viewed your brief"));
+});

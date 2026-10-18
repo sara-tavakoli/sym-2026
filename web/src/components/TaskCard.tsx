@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { api, ApiError, STATUS_LABELS, type Task, type TaskStatus } from "../lib/api";
+import { api, ApiError, STATUS_LABELS, type Task, type TaskCategory, type TaskStatus } from "../lib/api";
 import { useApp } from "../lib/app-context";
 import { useHelpers } from "../lib/circle";
 import { dueInfo } from "../lib/due";
+import { CATEGORY_META, CATEGORY_ORDER, categoryOf, sydneyToday } from "../lib/followthrough";
+import { CategoryBadge, DayStrip } from "./CareCalendar";
 
 /** One checklist row. Rendered inside a divided list, so it has no card chrome of its own. */
-export function TaskCard({ task, onChange, onDelete, showAppointment }: { task: Task; onChange: (t: Task) => void; onDelete: (id: string) => void; showAppointment?: boolean }) {
+export function TaskCard({ task, onChange, onDelete, showAppointment, today = sydneyToday() }: { task: Task; onChange: (t: Task) => void; onDelete: (id: string) => void; showAppointment?: boolean; today?: string }) {
   const { notify, user } = useApp();
   const helpers = useHelpers(user?.id);
   const [editing, setEditing] = useState(false);
@@ -16,8 +18,9 @@ export function TaskCard({ task, onChange, onDelete, showAppointment }: { task: 
   const [notes, setNotes] = useState(task.notes ?? "");
   const done = task.status === "completed";
   const due = dueInfo(task.due_date, done);
+  const category = categoryOf(task);
 
-  async function patch(body: Partial<Pick<Task, "title" | "notes" | "deadline" | "status" | "assignee_user_id">>) {
+  async function patch(body: Partial<Pick<Task, "title" | "notes" | "deadline" | "status" | "assignee_user_id" | "category">>) {
     try { onChange(await api.patch<Task>(`/tasks/${task.id}`, body)); return true; }
     catch (e) { notify(e instanceof ApiError ? e.message : "Could not save", "error"); return false; }
   }
@@ -31,7 +34,7 @@ export function TaskCard({ task, onChange, onDelete, showAppointment }: { task: 
   }
 
   return (
-    <li className={`task ${done ? "done" : ""}`}>
+    <li className={`task cat-task cat-${category} ${done ? "done" : ""}`}>
       <input type="checkbox" className="task-check" checked={done}
         aria-label={`Mark "${task.title}" ${done ? "not completed" : "completed"}`}
         onChange={(e) => patch({ status: e.target.checked ? "completed" : "todo" })} />
@@ -52,6 +55,7 @@ export function TaskCard({ task, onChange, onDelete, showAppointment }: { task: 
         {task.source_text !== "Added manually" && <p className="task-source">From your instructions: “{task.source_text}”</p>}
 
         <p className="task-meta">
+          <CategoryBadge category={category} />
           {task.deadline && !editing && (due ? <span className={`badge ${due.tone}`} title={`“${task.deadline}”`}>{due.label}</span> : <span>Due {task.deadline}</span>)}
           {task.assignee_name && <span className="badge">Assigned to {task.assignee_name}</span>}
           {showAppointment && task.practitioner_name && <Link to={`/app/appointments/${task.appointment_id}#follow-up`}>{task.practitioner_name}</Link>}
@@ -60,6 +64,8 @@ export function TaskCard({ task, onChange, onDelete, showAppointment }: { task: 
         {task.needs_clarification ? (
           <p className="task-flag"><strong>Check with your healthcare professional.</strong>{task.clarification_reason ? ` ${task.clarification_reason}` : ""}</p>
         ) : null}
+
+        {category === "daily" && <DayStrip task={task} today={today} onChange={onChange} />}
 
         {task.notes && !noteOpen && <p className="task-note"><span className="muted">Your note:</span> {task.notes}</p>}
         {noteOpen && (
@@ -78,6 +84,10 @@ export function TaskCard({ task, onChange, onDelete, showAppointment }: { task: 
             <button className="text-btn" onClick={() => setNoteOpen(true)}>{task.notes ? "Edit note" : "Add note"}</button>
             <button className="text-btn" onClick={() => setEditing(true)}>Edit</button>
             <button className="text-btn danger" onClick={remove}>Delete</button>
+            <select aria-label={`Type of task for "${task.title}"`} className="assign-select cat-select" value={category}
+              onChange={(e) => patch({ category: e.target.value as TaskCategory })}>
+              {CATEGORY_ORDER.map((c) => <option key={c} value={c}>{CATEGORY_META[c].label}</option>)}
+            </select>
             {(helpers.length > 0 || task.assignee_user_id) && (
               <select aria-label={`Who is doing "${task.title}"`} className="assign-select" value={task.assignee_user_id ?? ""}
                 onChange={(e) => patch({ assignee_user_id: e.target.value || null })}>

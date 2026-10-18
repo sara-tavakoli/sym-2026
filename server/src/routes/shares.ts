@@ -6,6 +6,7 @@ import { db } from "../db.js";
 import { newId, requireAuth } from "../auth.js";
 import { SECTIONS } from "../ai/brief.js";
 import { loadBrief } from "./prep.js";
+import { notifyBriefViewed, notifyPlanSent } from "../notifications.js";
 
 // Mounted at /api/appointments/:id (patient, signed in) and /api/share (clinician, public link).
 export const sharesRouter = Router({ mergeParams: true });
@@ -129,6 +130,7 @@ publicShareRouter.get("/:token", viewLimiter, (req, res) => {
   const share = liveShare(req, res);
   if (!share) return;
   db.prepare("UPDATE appointment_shares SET view_count = view_count + 1, first_viewed_at = COALESCE(first_viewed_at, ?) WHERE id = ? AND user_id = ?").run(nowIso(), share.id, share.user_id);
+  notifyBriefViewed(share);
   const appt = db.prepare("SELECT starts_at, practitioner_name, service_type, clinic_name FROM appointments WHERE id = ? AND user_id = ?").get(share.appointment_id, share.user_id);
   const name = (db.prepare("SELECT name FROM users WHERE id = ?").get(share.user_id) as { name: string }).name;
   const brief = loadBrief(share.appointment_id, share.user_id);
@@ -175,5 +177,6 @@ publicShareRouter.post("/:token/plan", planLimiter, (req, res) => {
   const b = planBody.parse(req.body);
   const id = newId();
   db.prepare("INSERT INTO clinician_plans (id, user_id, appointment_id, share_id, author, text) VALUES (?,?,?,?,?,?)").run(id, share.user_id, share.appointment_id, share.id, b.author, b.text);
+  notifyPlanSent(share, b.author);
   res.status(201).json({ plan: db.prepare("SELECT id, author, text, created_at FROM clinician_plans WHERE id = ? AND user_id = ?").get(id, share.user_id), plans: plansFor(share) });
 });

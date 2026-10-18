@@ -73,9 +73,16 @@ export interface Task {
   needs_clarification: number; clarification_reason: string | null; notes: string | null; created_at: string; updated_at: string;
   practitioner_name?: string; starts_at?: string;
   assignee_user_id?: string | null; assignee_name?: string | null; // care circle
+  // Follow-through: category, and for daily tasks a date range with ticked days (YYYY-MM-DD, Sydney).
+  category?: TaskCategory | null; duration_days?: number | null; start_date?: string | null; end_date?: string | null;
+  category_manual?: number; ticks?: string[];
 }
+export type TaskCategory = "urgent" | "daily" | "follow_up" | "one_time";
+export interface AppNotification { id: string; kind: string; message: string; link: string | null; created_at: string; read_at: string | null }
+export interface NotificationList { items: AppNotification[]; unread: number }
 export interface ProposedTask {
   title: string; source_text: string; deadline: string | null; needs_clarification: boolean; clarification_reason: string | null; is_medication: boolean; notes?: string;
+  category?: TaskCategory; duration_days?: number | null;
 }
 export const STATUS_LABELS: Record<TaskStatus, string> = { todo: "To do", in_progress: "In progress", completed: "Completed" };
 

@@ -2,6 +2,7 @@ import { NavLink, Outlet, Link } from "react-router-dom";
 import { useApp } from "../lib/app-context";
 import { Icon, Logo } from "./ui";
 import { DemoGuide } from "./DemoGuide";
+import { NotificationBell } from "./NotificationBell";
 
 type NavItem = { to: string; label: string; short: string; icon: Parameters<typeof Icon>[0]["name"]; end?: boolean };
 
@@ -55,6 +56,7 @@ export function Layout() {
           <header className="topbar">
             <Link to="/app" className="brand" aria-label="CarePath AI, dashboard"><Logo size={26} /><span className="wordmark">CarePath</span><span className="wordmark-ai">AI</span></Link>
             <div className="row" style={{ gap: ".25rem" }}>
+              <NotificationBell />
               <NavLink to="/app/circle" className="btn sm ghost" aria-label="Care circle"><Icon name="people" /></NavLink>
               <NavLink to="/app/settings" className="btn sm ghost" aria-label="Settings"><Icon name="gear" /></NavLink>
               <button className="btn sm ghost" onClick={logout}>Log out</button>

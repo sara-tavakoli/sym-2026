@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { api, ApiError, type ProposedTask, type Task } from "../lib/api";
+import { api, ApiError, type ProposedTask, type Task, type TaskCategory } from "../lib/api";
 import { useApp } from "../lib/app-context";
 import { Spinner } from "./ui";
 import { TaskCard } from "./TaskCard";
+import { CategoryLegend, Encouragement } from "./CareCalendar";
+import { CATEGORY_META, CATEGORY_ORDER, byCategory, sydneyToday } from "../lib/followthrough";
 
 /** `prefill` (e.g. a plan sent by a clinician) replaces the instructions text whenever its key changes; `onConfirmed` runs after tasks are saved. */
 export function FollowUpPanel({ appointmentId, onChanged, prefill, onConfirmed }:
@@ -14,6 +16,7 @@ export function FollowUpPanel({ appointmentId, onChanged, prefill, onConfirmed }
   const [busy, setBusy] = useState<"" | "extract" | "confirm">("");
   const [error, setError] = useState("");
   const [manual, setManual] = useState("");
+  const [today, setToday] = useState(sydneyToday());
   const textRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -23,7 +26,7 @@ export function FollowUpPanel({ appointmentId, onChanged, prefill, onConfirmed }
   }, [prefill?.key]);
 
   useEffect(() => {
-    api.get<{ tasks: Task[] }>(`/appointments/${appointmentId}/follow-up`).then((r) => setTasks(r.tasks)).catch((e) => setError(e.message));
+    api.get<{ tasks: Task[]; today?: string }>(`/appointments/${appointmentId}/follow-up`).then((r) => { setTasks(r.tasks); if (r.today) setToday(r.today); }).catch((e) => setError(e.message));
   }, [appointmentId]);
 
   const fail = (e: unknown) => setError(e instanceof ApiError ? e.message : "Something went wrong. Please try again.");
@@ -81,6 +84,16 @@ export function FollowUpPanel({ appointmentId, onChanged, prefill, onConfirmed }
               <span>{t.deadline ? `Due ${t.deadline}` : "No deadline stated"}</span>
               {t.is_medication && <span>Medication wording kept exactly as entered</span>}
             </p>
+            {t.category && (
+              <div className="review-cat">
+                <label htmlFor={`pc-${appointmentId}-${i}`}>Type</label>
+                <select id={`pc-${appointmentId}-${i}`} className={`cat-select cat-${t.category}`} value={t.category}
+                  onChange={(e) => setProp(i, { category: e.target.value as TaskCategory, duration_days: e.target.value === "daily" ? t.duration_days ?? 7 : null })}>
+                  {CATEGORY_ORDER.map((c) => <option key={c} value={c}>{CATEGORY_META[c].label}</option>)}
+                </select>
+                {t.category === "daily" && <span className="small muted">Calendar for {t.duration_days ?? 7} days, starting today</span>}
+              </div>
+            )}
             {t.needs_clarification && <p className="task-flag"><strong>Check with your healthcare professional.</strong>{t.clarification_reason ? ` ${t.clarification_reason}` : ""}</p>}
           </li>
         ))}
@@ -98,13 +111,14 @@ export function FollowUpPanel({ appointmentId, onChanged, prefill, onConfirmed }
       {error && <div className="alert error" role="alert">{error}</div>}
 
       <div className="checklist">
-        <h3>Checklist</h3>
+        <div className="checklist-head"><h3>Checklist</h3>{hasTasks && <CategoryLegend />}</div>
+        {hasTasks && <Encouragement tasks={tasks!} today={today} />}
         {!tasks && <div className="skeleton" style={{ height: 56 }} />}
         {tasks && tasks.length === 0 && !proposed && <p className="muted small">No tasks yet. Add the instructions you were given below, or add a task yourself.</p>}
         {hasTasks && (
           <ul className="task-list">
-            {tasks!.map((t) => (
-              <TaskCard key={t.id} task={t}
+            {byCategory(tasks!).map((t) => (
+              <TaskCard key={t.id} task={t} today={today}
                 onChange={(n) => { setTasks((x) => x!.map((y) => (y.id === n.id ? n : y))); onChanged?.(); }}
                 onDelete={(id) => { setTasks((x) => x!.filter((y) => y.id !== id)); onChanged?.(); }} />
             ))}
