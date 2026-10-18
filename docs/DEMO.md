@@ -28,7 +28,7 @@
 - **"Privacy?"** Fictional data only. Share and invite tokens are stored hashed; supporters never see private notes; account deletion removes everything. AI text goes to the provider only when the user asks.
 
 ## Extra segments if there's time or a question
-- **Find care** (public, /find-care): "Sore ankle after a fall" → physiotherapist suggested with the reason quoted → See matching services → Fit Finder pre-filled.
+- **Book care** (public, /get-care): "No, I'm not sure" → *Help me find care*: "I have a headache and feel unsure what to do" → summary + GP pathway → Find a clinic and book → Book appointment → pick a time → Create an account → profile → Review → Confirm → dashboard → Prepare (the concern is pre-filled) → on the appointment, "No, keep it for myself".
 - **Import a booking**: Appointments → Import booking confirmation → Sample email → Fill in the form.
 - **Assistant**: "Can you write me some Python code?" → politely declined; "I want to invite my mum to help" → Care circle button.
 

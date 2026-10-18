@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { api, ApiError, prefsToQuery, type User } from "../lib/api";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { api, ApiError, prefsToQuery } from "../lib/api";
 import { useApp } from "../lib/app-context";
-import { Logo, Spinner } from "../components/ui";
+import { Spinner } from "../components/ui";
 import { EmergencyBanner } from "../components/EmergencyBanner";
+import { PublicShell, carePath, rememberConcern } from "../components/PublicShell";
 import "../findcare.css";
 
-// "Not sure where to start? Find care that fits": four short questions, then a rule-based, non-diagnostic suggestion
-// of the kind of service people often start with, handed to Fit Finder with the answers prefilled.
+// "Help me find care": the person describes the concern in their own words, answers a few follow-up questions,
+// sees a summary of what they told us, then a rule-based, non-diagnostic suggestion of the kind of service people
+// often start with (e.g. a GP), handed to clinic search with the answers prefilled so they can choose a time and book.
 
 type Duration = "under_week" | "weeks" | "months" | "over_3_months";
 type Seen = "no" | "yes" | "referral";
@@ -25,7 +27,7 @@ interface SuggestResponse {
 }
 interface Meta { durations: { id: Duration; label: string }[]; coverage: { suburb: string; state: string; postcode: string }[] }
 
-const STEPS = ["What's going on", "How long", "Seen anyone?", "Where and how"];
+const STEPS = ["Your concern", "How long", "Seen anyone?", "Where and how"];
 const DURATIONS: { id: Duration; label: string }[] = [
   { id: "under_week", label: "Less than a week" }, { id: "weeks", label: "1 to 4 weeks" },
   { id: "months", label: "1 to 3 months" }, { id: "over_3_months", label: "More than 3 months" },
@@ -38,12 +40,12 @@ const MODES: { id: Mode; label: string }[] = [
 ];
 const EXAMPLES = ["Sore ankle after a fall last week", "Toothache when I drink something cold", "Feeling stressed and not sleeping well"];
 
-function fitFinderUrl(category: string, location: string | null | undefined, mode: string | null | undefined) {
-  return `/app/fit-finder?${prefsToQuery({ category, location: location ?? undefined, mode: mode === "in_person" || mode === "telehealth" ? mode : undefined })}`;
+function searchUrl(signedIn: boolean, category: string, location: string | null | undefined, mode: string | null | undefined) {
+  return `${carePath(signedIn, "search")}?${prefsToQuery({ category, location: location ?? undefined, mode: mode === "in_person" || mode === "telehealth" ? mode : undefined })}`;
 }
 
 export default function FindCare({ publicPage = false }: { publicPage?: boolean }) {
-  const { user, setUser } = useApp();
+  const { user } = useApp();
   const nav = useNavigate();
   const [params] = useSearchParams();
   const [step, setStep] = useState(0);
@@ -102,13 +104,9 @@ export default function FindCare({ publicPage = false }: { publicPage?: boolean 
     if (step < 3) setStep(step + 1); else void submit();
   }
 
-  async function openFitFinder(url: string) {
-    if (user) { nav(url); return; }
-    // Signed out on the public page: open a private demo sandbox (fictional data), then go straight to the results.
-    setBusy(true); setError("");
-    try { const r = await api.post<{ user: User }>("/demo"); setUser(r.user); nav(url); }
-    catch (err) { setError(err instanceof ApiError ? err.message : "Couldn't open the demo. Please try again."); setBusy(false); }
-  }
+  // Clinic search works signed out; an account is only needed when the booking is confirmed.
+  // The concern goes along (this tab only) so it can become the booking's reason for visit.
+  function openSearch(url: string) { rememberConcern(concern); nav(url); }
 
   function restart() { setResult(null); setStep(0); setConcern(""); setDuration(""); setSeen(""); setLocation(""); setMode("either"); setAck(false); }
 
@@ -116,8 +114,8 @@ export default function FindCare({ publicPage = false }: { publicPage?: boolean 
     <div className="fc">
       <header className="fc-head">
         <p className="eyebrow">Not sure where to start?</p>
-        <h1>Find care that fits</h1>
-        <p className="muted">Answer four quick questions and we'll suggest the kind of service people often start with, then show matching services nearby.</p>
+        <h1>Help me find care</h1>
+        <p className="muted">Describe what's going on in simple words. We'll ask a few follow-up questions, summarise your concern, suggest the kind of service people often start with, and show clinics you can book.</p>
       </header>
 
       <div className="fc-disclaimer" role="note">
@@ -129,7 +127,8 @@ export default function FindCare({ publicPage = false }: { publicPage?: boolean 
       {result?.suggestion ? (
         <Result
           r={result} acknowledged={ack} busy={busy} signedIn={!!user} error={error}
-          headRef={headRef} onOpen={openFitFinder} onEdit={() => { setResult(null); setStep(3); }} onRestart={restart}
+          answers={{ concern: concern.trim(), duration, seen, mode }}
+          headRef={headRef} onOpen={openSearch} onEdit={() => { setResult(null); setStep(3); }} onRestart={restart}
         />
       ) : (
         <form className="fc-card card" onSubmit={next} noValidate aria-labelledby="fc-step-h">
@@ -140,7 +139,7 @@ export default function FindCare({ publicPage = false }: { publicPage?: boolean 
               </li>
             ))}
           </ol>
-          <p className="fc-count">Step {step + 1} of 4</p>
+          <p className="fc-count">Step {step + 1} of 4{step > 0 ? " · a few follow-up questions" : ""}</p>
 
           {step === 0 && (
             <div className="fc-step">
@@ -219,36 +218,33 @@ export default function FindCare({ publicPage = false }: { publicPage?: boolean 
     </div>
   );
 
-  if (!publicPage) return body;
-  return (
-    <div className="fc-public">
-      <header className="fc-public-head">
-        <Link to="/" className="fc-brand" aria-label="CarePath AI home"><Logo size={26} /><span>CarePath <b>AI</b></span></Link>
-        <nav className="row" aria-label="Account">
-          {user ? <Link className="btn sm" to="/app">Dashboard</Link> : <><Link className="btn sm ghost" to="/login">Sign in</Link><Link className="btn sm primary" to="/try">Try the demo</Link></>}
-        </nav>
-      </header>
-      <main id="main" className="fc-public-main">{body}</main>
-      <footer className="fc-public-foot" role="note">
-        CarePath organises information. It isn't a medical service and doesn't diagnose or recommend treatment. In an emergency call <strong>000</strong>.
-        Every clinic in the demo directory is fictional.
-      </footer>
-    </div>
-  );
+  return publicPage ? <PublicShell>{body}</PublicShell> : body;
 }
 
-function Result({ r, acknowledged, busy, signedIn, error, headRef, onOpen, onEdit, onRestart }: {
-  r: SuggestResponse; acknowledged: boolean; busy: boolean; signedIn: boolean; error: string;
+interface Answers { concern: string; duration: Duration | ""; seen: Seen | ""; mode: Mode }
+
+function Result({ r, acknowledged, busy, signedIn, error, answers, headRef, onOpen, onEdit, onRestart }: {
+  r: SuggestResponse; acknowledged: boolean; busy: boolean; signedIn: boolean; error: string; answers: Answers;
   headRef: React.RefObject<HTMLHeadingElement | null>; onOpen: (url: string) => void; onEdit: () => void; onRestart: () => void;
 }) {
   const s = r.suggestion!;
   const loc = r.location?.known ? r.location.suburb : null;
-  const mainUrl = s.category ? fitFinderUrl(s.category, loc, s.mode) : null;
+  const mainUrl = s.category ? searchUrl(signedIn, s.category, loc, s.mode) : null;
   return (
     <section className="fc-result" aria-labelledby="fc-result-h">
       {r.emergency && <EmergencyBanner selfHarm={r.emergency.selfHarm} acknowledged={acknowledged} />}
+      <div className="card fc-summary" aria-labelledby="fc-summary-h">
+        <div className="fc-summary-head"><h2 id="fc-summary-h">Your concern, summarised</h2><button type="button" className="btn ghost sm" onClick={onEdit}>Edit</button></div>
+        <dl>
+          <div><dt>In your words</dt><dd>“{answers.concern}”</dd></div>
+          {answers.duration && <div><dt>How long</dt><dd>{DURATIONS.find((d) => d.id === answers.duration)?.label}</dd></div>}
+          {answers.seen && <div><dt>Seen anyone?</dt><dd>{SEEN.find((d) => d.id === answers.seen)?.label}</dd></div>}
+          <div><dt>Where and how</dt><dd>{r.location?.known ? r.location.resolved : r.location ? `${r.location.query} (not in the demo area)` : "Anywhere"} · {MODES.find((m) => m.id === answers.mode)?.label}</dd></div>
+        </dl>
+        <p className="small muted" style={{ margin: 0 }}>Only you see this. It's kept in this browser tab so it can go with your booking as the reason for visit.</p>
+      </div>
       <div className="card fc-suggest">
-        <p className="eyebrow">A place to start</p>
+        <p className="eyebrow">Suggested pathway</p>
         <h2 id="fc-result-h" ref={headRef} tabIndex={-1}>{s.headline}</h2>
         <p className="fc-reason">{s.reason}</p>
         {s.notes.length > 0 && <ul className="fc-notes">{s.notes.map((n) => <li key={n}>{n}</li>)}</ul>}
@@ -258,12 +254,12 @@ function Result({ r, acknowledged, busy, signedIn, error, headRef, onOpen, onEdi
         {mainUrl && (
           <div className="fc-cta">
             <button type="button" className="btn primary fc-big" onClick={() => onOpen(mainUrl)} disabled={busy}>
-              {busy ? <Spinner /> : null}See matching services
+              {busy ? <Spinner /> : null}Find a clinic and book
             </button>
             <p className="fc-hint">
-              Opens Fit Finder with <strong>{s.label}</strong>{loc ? <> near <strong>{r.location!.resolved}</strong></> : null}
-              {s.mode === "telehealth" ? <>, <strong>telehealth</strong></> : s.mode === "in_person" ? <>, <strong>in person</strong></> : null} prefilled.
-              {!signedIn && " No sign-up: it opens a private demo sandbox with fictional clinics."}
+              Shows <strong>{s.label}</strong> clinics{loc ? <> near <strong>{r.location!.resolved}</strong></> : null}
+              {s.mode === "telehealth" ? <> offering <strong>telehealth</strong></> : s.mode === "in_person" ? <>, <strong>in person</strong></> : null}. Choose one and pick a time.
+              {!signedIn && " No sign-up needed to look; you'll sign in when you confirm."}
             </p>
           </div>
         )}
@@ -275,7 +271,7 @@ function Result({ r, acknowledged, busy, signedIn, error, headRef, onOpen, onEdi
               {s.alternatives.map((a) => (
                 <li key={a.id}>
                   <div><strong>{a.label}</strong> <span className="muted">{a.reason}</span></div>
-                  {a.category && <button type="button" className="btn sm" onClick={() => onOpen(fitFinderUrl(a.category!, loc, a.id === "telehealth_gp" ? "telehealth" : s.mode))} disabled={busy}>Search {a.label}</button>}
+                  {a.category && <button type="button" className="btn sm" onClick={() => onOpen(searchUrl(signedIn, a.category!, loc, a.id === "telehealth_gp" ? "telehealth" : s.mode))} disabled={busy}>Search {a.label}</button>}
                 </li>
               ))}
             </ul>

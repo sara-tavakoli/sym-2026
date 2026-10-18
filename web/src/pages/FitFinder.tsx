@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ACCESS_LABELS, api, ApiError, DAY_LABELS, prefsToQuery, queryToPrefs,
   type AccessFeature, type Day, type ExtractedPrefs, type Prefs, type SavedSearch, type SearchResult,
@@ -8,11 +8,20 @@ import { useApp } from "../lib/app-context";
 import { Skeletons, Spinner } from "../components/ui";
 import { AppointmentForm } from "../components/AppointmentForm";
 import { CATEGORY_TO_SERVICE, ProviderCard, prefChips, useFitMeta } from "../components/fit";
+import { PublicShell, carePath } from "../components/PublicShell";
 
 const EMPTY: Partial<Prefs> = { radius_km: 10 };
 const PAGE_SIZE = 6;
 
-export default function FitFinder() {
+export default function FitFinder({ publicPage = false }: { publicPage?: boolean }) {
+  const { user } = useApp();
+  const { search } = useLocation();
+  // Signed in on the public search: the same search inside the app (saved searches, compare, AI request reading).
+  if (publicPage && user) return <Navigate to={`/app/fit-finder${search}`} replace />;
+  return publicPage ? <PublicShell><Finder signedIn={false} /></PublicShell> : <Finder signedIn />;
+}
+
+function Finder({ signedIn }: { signedIn: boolean }) {
   const meta = useFitMeta();
   const nav = useNavigate();
   const { notify } = useApp();
@@ -53,7 +62,8 @@ export default function FitFinder() {
     return () => { cancelled = true; };
   }, [urlPrefs, page]);
 
-  useEffect(() => { api.get<{ items: SavedSearch[] }>("/fit-finder/saved").then((r) => setSaved(r.items)).catch(() => {}); }, []);
+  useEffect(() => { if (signedIn) api.get<{ items: SavedSearch[] }>("/fit-finder/saved").then((r) => setSaved(r.items)).catch(() => {}); }, [signedIn]);
+  const book = (id: string) => nav(`${carePath(signedIn, "book", encodeURIComponent(id))}${urlPrefs.mode === "telehealth" ? "?mode=telehealth" : ""}`);
 
   function run(prefs: Partial<Prefs>, p = 1) {
     if (!prefs.category) { setError({ message: "Choose a service type to search." }); return; }
@@ -99,15 +109,16 @@ export default function FitFinder() {
     <div className="stack fade-in">
       <div className="page-head">
         <div>
-          <h1>Fit Finder</h1>
-          <p className="muted">Compare healthcare services by the practical things that matter to you — location, hours, telehealth, accessibility, billing and language.</p>
+          <h1>{signedIn ? "Fit Finder" : "Find a clinic"}</h1>
+          <p className="muted">Compare healthcare services by the practical things that matter to you — location, hours, telehealth, accessibility, billing and language. Then choose a time and book.</p>
         </div>
       </div>
       <div className="alert warn" role="note">
         <strong>Demonstration directory.</strong> Every provider shown is fictional. Fit Finder compares practical details only — it doesn't judge clinical quality or tell you which service you medically need. For advice on what kind of care to seek, call Healthdirect on 1800 022 222. In an emergency call 000.
       </div>
+      <p className="small muted" style={{ margin: 0 }}>Not sure what kind of service you need? <Link to={carePath(signedIn, "find-care")}>Help me find care</Link></p>
 
-      <section className="card ff-nl" aria-labelledby="nl-h">
+      {signedIn && <section className="card ff-nl" aria-labelledby="nl-h">
         <h2 id="nl-h">Describe what you're looking for</h2>
         <div className="row" style={{ alignItems: "flex-end" }}>
           <div style={{ flex: 1, minWidth: 240 }}>
@@ -129,7 +140,7 @@ export default function FitFinder() {
             ) : <p className="small">We couldn't find specific preferences in that request. Use the filters below instead.</p>}
           </div>
         )}
-      </section>
+      </section>}
 
       <details className="card ff-form" open={filtersOpen} onToggle={(e) => setFiltersOpen((e.currentTarget as HTMLDetailsElement).open)}>
         <summary className="ff-summary">
@@ -245,7 +256,7 @@ export default function FitFinder() {
             <div className="results-head">
               <div className="results-title">
               <h2 id="results-h">{result.total} {result.total === 1 ? "provider" : "providers"}{result.origin ? ` near ${result.origin.suburb}` : ""}</h2>
-                <button type="button" className="btn sm" onClick={saveSearch}>Save search</button>
+                {signedIn && <button type="button" className="btn sm" onClick={saveSearch}>Save search</button>}
               </div>
               <p className="small muted">Ranked by how many of your preferences are met, then by distance. “Not verified” is never counted as a match.{result.excluded_strict ? ` ${result.excluded_strict} hidden because they don't meet every preference.` : ""}</p>
             </div>
@@ -256,8 +267,8 @@ export default function FitFinder() {
               {result.items.map((it) => (
                 <ProviderCard key={it.provider.id} item={it}
                   selected={compare.includes(it.provider.id)} compareDisabled={compare.length >= 3}
-                  onToggleCompare={() => setCompare((c) => (c.includes(it.provider.id) ? c.filter((x) => x !== it.provider.id) : [...c, it.provider.id]))}
-                  onAddAppointment={() => setAddFor(it)} />
+                  onToggleCompare={signedIn ? () => setCompare((c) => (c.includes(it.provider.id) ? c.filter((x) => x !== it.provider.id) : [...c, it.provider.id])) : undefined}
+                  onAddAppointment={signedIn ? () => setAddFor(it) : undefined} onBook={() => book(it.provider.id)} />
               ))}
             </div>
             {result.total > result.pageSize && (

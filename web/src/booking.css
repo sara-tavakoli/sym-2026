@@ -1,0 +1,79 @@
+/* Book care: the "do you know what you need?" start page and the booking flow. Uses the app's CSS variables only. */
+
+/* Start page */
+.gc { max-width: 860px; margin: 0 auto; }
+.gc-head h1 { margin: .2rem 0 .5rem; }
+.gc-head p { margin: 0 0 1.4rem; max-width: 60ch; }
+.gc-paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+.gc-path { display: flex; flex-direction: column; gap: .45rem; padding: 1.4rem; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface); color: var(--text); text-decoration: none; transition: border-color .15s, box-shadow .15s, transform .08s; }
+.gc-path:hover { border-color: var(--primary); box-shadow: var(--shadow-lg, 0 10px 30px -18px rgba(0,0,0,.35)); }
+.gc-path:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.gc-path:active { transform: translateY(1px); }
+.gc-kicker { font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--primary-ink); }
+.gc-title { font-size: 1.3rem; font-weight: 700; }
+.gc-text { color: var(--muted); line-height: 1.5; flex: 1; }
+.gc-go { font-weight: 700; color: var(--primary-ink); margin-top: .3rem; }
+.gc-steps { list-style: none; margin: 1.5rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: .6rem; }
+.gc-steps li { display: flex; align-items: center; gap: .5rem; font-size: .86rem; color: var(--muted); padding: .65rem .75rem; border-radius: var(--radius-sm); background: var(--surface-2); }
+.gc-steps b { flex: none; width: 1.5rem; height: 1.5rem; border-radius: 999px; display: grid; place-items: center; font-size: .75rem; background: var(--primary); color: var(--on-primary); }
+.gc-fine { font-size: .8rem; color: var(--muted); margin: 1.25rem 0 0; }
+@media (max-width: 720px) { .gc-steps { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 420px) { .gc-steps { grid-template-columns: 1fr; } }
+
+/* Booking flow */
+.bk { max-width: 860px; margin: 0 auto; min-width: 0; }
+.bk-head h1 { margin: .2rem 0 .3rem; font-size: 1.7rem; }
+.bk-head p { margin: 0 0 1rem; }
+.bk-steps { margin-bottom: 1rem; }
+.bk-card { padding: 1.4rem; min-width: 0; }
+.bk-card h2 { font-size: 1.25rem; margin: 0 0 .5rem; }
+.bk-card h2:focus { outline: none; }
+.bk-card h2:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; border-radius: 4px; }
+.bk-modes { border: 0; padding: 0; margin: .8rem 0 0; }
+
+.bk-days { display: flex; gap: .5rem; overflow-x: auto; padding: .25rem .1rem .6rem; margin: 1rem 0 .5rem; scroll-snap-type: x proximity; }
+.bk-day { flex: none; scroll-snap-align: start; display: grid; justify-items: center; gap: .05rem; min-width: 74px; padding: .55rem .5rem; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
+.bk-day b { font-size: 1.3rem; line-height: 1.1; }
+.bk-wd, .bk-mon { font-size: .75rem; color: var(--muted); }
+.bk-n { font-size: .68rem; color: var(--muted); margin-top: .15rem; }
+.bk-day:hover { border-color: var(--faint, var(--primary)); }
+.bk-day.is-on { border-color: var(--primary); background: var(--primary-soft); }
+.bk-day.is-on .bk-wd, .bk-day.is-on .bk-mon, .bk-day.is-on .bk-n { color: var(--primary-ink); }
+.bk-day:focus-visible, .bk-slot:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+
+.bk-slots { display: grid; gap: .8rem; }
+.bk-slot-group h3 { font-size: .8rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin: 0 0 .4rem; }
+.bk-slot-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: .4rem; }
+.bk-slot { min-height: 42px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; font-variant-numeric: tabular-nums; }
+.bk-slot:hover { border-color: var(--primary); }
+.bk-slot.is-on { background: var(--primary); border-color: transparent; color: var(--on-primary); }
+
+.bk-form { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; margin-top: .6rem; }
+@media (max-width: 620px) { .bk-form { grid-template-columns: 1fr; } }
+
+.bk-review { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin: .5rem 0 1rem; }
+@media (max-width: 720px) { .bk-review { grid-template-columns: 1fr; } }
+.bk-review-head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; margin-bottom: .5rem; }
+.bk-review-head h3 { font-size: 1rem; margin: 0; }
+.bk-dl { margin: 0; display: grid; gap: .45rem; }
+.bk-dl div { display: grid; grid-template-columns: 8.5rem 1fr; gap: .5rem; }
+.bk-dl dt { font-size: .85rem; color: var(--muted); }
+.bk-dl dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 420px) { .bk-dl div { grid-template-columns: 1fr; gap: 0; } }
+
+.bk .fc-big { white-space: nowrap; padding: 0 1.25rem; }
+.bk-done { text-align: center; }
+.bk-tick { width: 3.2rem; height: 3.2rem; border-radius: 999px; display: grid; place-items: center; margin: 0 auto .6rem; font-size: 1.5rem; font-weight: 700; background: var(--ok-soft, var(--primary-soft)); color: var(--ok, var(--primary)); }
+.bk-when { font-size: 1.1rem; font-weight: 600; margin: 0 0 .25rem; }
+.bk-ref { font-variant-numeric: tabular-nums; letter-spacing: .04em; color: var(--text); }
+.bk-done p:not(.bk-tick) { max-width: 56ch; margin-left: auto; margin-right: auto; }
+
+/* Brief share choice (appointment page) */
+.share-choice { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin: .4rem 0 1rem; }
+@media (max-width: 560px) { .share-choice { grid-template-columns: 1fr; } }
+.share-choice button { text-align: left; display: grid; gap: .2rem; padding: .85rem 1rem; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
+.share-choice button:hover { border-color: var(--primary); }
+.share-choice button[aria-pressed="true"] { border-color: var(--primary); background: var(--primary-soft); }
+.share-choice button:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.share-choice strong { font-size: .95rem; }
+.share-choice span { font-size: .84rem; color: var(--muted); }

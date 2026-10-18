@@ -138,7 +138,7 @@ test("provider requests return verified search preferences and Fit Finder action
   });
   const r = await c.call("POST", "/api/assistant/chat", say("I'm looking for a GP around Macquarie Park, preferably on weekends, with bulk billing if available."));
   assert.equal(r.status, 200);
-  assert.deepEqual(r.data.actions.map((a: any) => a.href), ["/app/fit-finder", "https://www.healthdirect.gov.au/australian-health-services"]);
+  assert.deepEqual(r.data.actions.map((a: any) => a.href), ["/app/get-care", "/app/fit-finder", "https://www.healthdirect.gov.au/australian-health-services"]);
   assert.deepEqual(r.data.search.prefs, { category: "gp", location: "Macquarie Park", days: ["sat", "sun"], bulk_billing: true });
   assert.equal(r.data.search.dropped, 1);
   assert.equal(r.data.search.location_known, true);

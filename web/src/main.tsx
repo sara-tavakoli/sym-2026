@@ -27,6 +27,8 @@ import FitFinder from "./pages/FitFinder";
 import DraftBrief from "./pages/DraftBrief";
 import Compare from "./pages/Compare";
 import FindCare from "./pages/FindCare";
+import GetCare from "./pages/GetCare";
+import Book from "./pages/Book";
 
 function Protected() {
   const { user, loading } = useApp();
@@ -43,7 +45,10 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/login" element={<Auth mode="login" />} />
           <Route path="/register" element={<Auth mode="register" />} />
           <Route path="/try" element={<TryDemo />} />
+          <Route path="/get-care" element={<GetCare publicPage />} />
           <Route path="/find-care" element={<FindCare publicPage />} />
+          <Route path="/search" element={<FitFinder publicPage />} />
+          <Route path="/book/:providerId" element={<Book publicPage />} />
           <Route path="/join/:token" element={<Join />} />
           <Route path="/c/:token" element={<ClinicianView />} />
           <Route path="/app" element={<Protected />}>
@@ -55,7 +60,9 @@ createRoot(document.getElementById("root")!).render(
             <Route path="assistant" element={<AssistantPage />} />
             <Route path="preparation" element={<PrepList />} />
             <Route path="drafts/:id" element={<DraftBrief />} />
+            <Route path="get-care" element={<GetCare />} />
             <Route path="find-care" element={<FindCare />} />
+            <Route path="book/:providerId" element={<Book />} />
             <Route path="fit-finder" element={<FitFinder />} />
             <Route path="fit-finder/compare" element={<Compare />} />
             <Route path="follow-up" element={<FollowUp />} />

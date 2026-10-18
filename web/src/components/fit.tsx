@@ -100,8 +100,8 @@ export function HoursTable({ hours }: { hours: Evaluated["provider"]["hours"] })
 const date = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : null);
 export const verifiedText = (iso: string | null) => (iso ? `verified ${date(iso)} (demo)` : "not verified");
 
-export function ProviderCard({ item, selected, onToggleCompare, compareDisabled, onAddAppointment }: {
-  item: Evaluated; selected: boolean; onToggleCompare: () => void; compareDisabled: boolean; onAddAppointment: () => void;
+export function ProviderCard({ item, selected, onToggleCompare, compareDisabled, onAddAppointment, onBook }: {
+  item: Evaluated; selected: boolean; onToggleCompare?: () => void; compareDisabled: boolean; onAddAppointment?: () => void; onBook: () => void;
 }) {
   const p = item.provider;
   const groups: [MatchStatus, Check[]][] = (["met", "partial", "not_met", "unverified"] as MatchStatus[]).map((s) => [s, item.checks.filter((c) => c.status === s)]);
@@ -159,10 +159,15 @@ export function ProviderCard({ item, selected, onToggleCompare, compareDisabled,
       </details>
 
       <footer className="provider-foot">
-        <label className="compare-toggle">
-          <input type="checkbox" checked={selected} disabled={!selected && compareDisabled} onChange={onToggleCompare} /> Compare
-        </label>
-        <button type="button" className="btn sm" onClick={onAddAppointment}>Add to my appointments</button>
+        {onToggleCompare ? (
+          <label className="compare-toggle">
+            <input type="checkbox" checked={selected} disabled={!selected && compareDisabled} onChange={onToggleCompare} /> Compare
+          </label>
+        ) : <span />}
+        <div className="row">
+          {onAddAppointment && <button type="button" className="btn sm ghost" onClick={onAddAppointment} title="Already booked somewhere else? Record it here.">Already booked? Add it</button>}
+          <button type="button" className="btn sm primary" onClick={onBook}>Book appointment<span className="sr-only"> with {p.name}</span></button>
+        </div>
       </footer>
     </article>
   );

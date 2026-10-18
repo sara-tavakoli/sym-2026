@@ -31,8 +31,11 @@ before(async () => {
 });
 const status = (item: any, key: string) => item.checks.find((x: any) => x.key === key)?.status;
 
-test("requires authentication", async () => {
-  assert.equal((await new Client().call("GET", "/api/fit-finder/search?category=gp")).status, 401);
+test("search is public; saved searches and AI request reading need an account", async () => {
+  assert.equal((await new Client().call("GET", "/api/fit-finder/search?category=gp")).status, 200);
+  assert.equal((await new Client().call("GET", "/api/fit-finder/meta")).status, 200);
+  assert.equal((await new Client().call("GET", "/api/fit-finder/saved")).status, 401);
+  assert.equal((await new Client().call("POST", "/api/fit-finder/extract", { text: "a GP near Ryde" })).status, 401);
 });
 
 test("meta lists categories, covered suburbs and the fictional-data notice", async () => {

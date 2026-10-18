@@ -3,7 +3,8 @@
 Better prepared. Better organised. Better care. An organisational and navigation tool for healthcare appointments — **not** a medical service. Demo use only: fictional data.
 
 ## Features
-- **Appointments** — your own records of appointments (nothing is booked with providers).
+- **Book care** — "Do you know what care you need?" **No:** *Help me find care* (describe the concern in your own words, a few follow-up questions, a summary of what you said, a suggested pathway such as a GP). **Yes:** search clinics directly. Then choose a clinic and a time, sign in or sign up only at that point, complete a patient profile once, review and confirm. The appointment lands on the dashboard with a reference. **Clinics are fictional and no real clinic is contacted**; times are generated from published opening hours and a time can be booked once.
+- **Appointments** — demo bookings plus your own records of appointments booked elsewhere (add manually or import a confirmation).
 - **CarePath AI Assistant** (dashboard + its own page) — conversational help preparing for appointments and describing what kind of service you need. Never diagnoses or recommends treatment; emergencies get fixed 000 guidance.
 - **AI Preparation** — turn your own notes, or an assistant conversation, into an editable, source-linked brief. Drafts can exist before an appointment and be attached later.
 - **Fit Finder** — find and compare healthcare services by practical needs (location, published hours, telehealth, accessibility, verified billing, language). Deterministic, explainable matching; "Not verified" is never treated as a match. Natural-language requests are turned into editable filters. **The provider directory is fictional demo data.**
@@ -11,7 +12,7 @@ Better prepared. Better organised. Better care. An organisational and navigation
 
 **One loop around every appointment** booked on HotDoc:
 1. **Before:** import the booking confirmation, then turn your own notes into a one-page brief where every point is traced to what you wrote.
-2. **During:** share the brief with your clinician through an expiring link; they tick off your questions and send back the after-visit plan.
+2. **During:** choose whether to share the brief. Share it with your clinician through an expiring link (they tick off your questions and send back the after-visit plan), or keep it for yourself.
 3. **After:** the plan becomes a checklist with due dates; overdue and unclear items are surfaced, with a ready-to-send message to the clinic.
 4. **Together:** invite a family member or carer as a viewer or helper who can take ownership of tasks.
 

@@ -124,6 +124,7 @@ await step("open confirmed-brief appointment → share with clinician → create
   await alex.locator(".appt-row", { hasText: "Dr Priya Lee" }).first().locator("a").click();
   await alex.getByRole("heading", { name: "Dr Priya Lee" }).waitFor();
   gpUrl = alex.url();
+  await alex.getByRole("button", { name: /Yes, share with my clinician/ }).click();
   await alex.getByRole("button", { name: "Create share link" }).click();
   shareLink = await alex.getByLabel("Your clinician link").inputValue();
   expect(/\/c\/[A-Za-z0-9_-]{20,}$/.test(shareLink), `share link looks wrong: ${shareLink}`);
@@ -333,9 +334,9 @@ await step("Fit Finder: save search → re-run → delete", async () => {
   expect((await alex.getByRole("button", { name: "E2E GP search", exact: true }).count()) === 0, "deleted saved search came back");
 });
 
-await step("Fit Finder: Add to my appointments → prefilled form → saved", async () => {
-  const card = alex.locator("article").filter({ has: alex.getByRole("button", { name: "Add to my appointments" }) }).first();
-  await card.getByRole("button", { name: "Add to my appointments" }).click();
+await step("Fit Finder: Already booked? Add it → prefilled form → saved", async () => {
+  const card = alex.locator("article").filter({ has: alex.getByRole("button", { name: "Already booked? Add it" }) }).first();
+  await card.getByRole("button", { name: "Already booked? Add it" }).click();
   const prac = await alex.locator('input[name="practitioner_name"]').inputValue();
   expect(prac.length > 2, "practitioner prefilled from provider");
   expect((await alex.locator('input[name="clinic_name"]').inputValue()).length > 2, "clinic prefilled");

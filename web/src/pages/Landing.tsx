@@ -236,7 +236,8 @@ export default function Landing() {
                     <li>Bulk billing</li><li>Open weekends</li><li>Telehealth</li><li>Speaks Mandarin</li><li>Wheelchair access</li>
                   </ul>
                   <div className="lp-ctas">
-                    <Link className="lp-btn lp-btn-gold" to="/try?next=fit-finder">Explore Fit Finder <I d="arrow" size={18} /></Link>
+                    <Link className="lp-btn lp-btn-gold" to="/get-care">Book care <I d="arrow" size={18} /></Link>
+                    <Link className="lp-btn lp-btn-glass" to="/find-care">Help me find care</Link>
                   </div>
                 </div>
               </div>

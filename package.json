@@ -18,6 +18,7 @@
     "ui-assistant": "tsx server/scripts/ui-assistant.ts",
     "ui-dashboard": "tsx server/scripts/ui-dashboard.ts",
     "ui-fitfinder": "tsx server/scripts/ui-fitfinder.ts",
+    "ui-booking": "tsx server/scripts/ui-booking.ts",
     "ui-ai-features": "tsx server/scripts/ui-ai-features.ts",
     "ui-journey": "tsx server/scripts/ui-journey.ts",
     "ui-audit": "tsx server/scripts/ui-audit.ts",

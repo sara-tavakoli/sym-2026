@@ -34,7 +34,9 @@ export interface Appointment {
   id: string; starts_at: string; practitioner_name: string; service_type: string; clinic_name: string;
   location: string | null; purpose: string | null; prep_status: PrepStatus;
   open_tasks: number; done_tasks: number; instruction_count: number; pending_plans: number;
+  booking_ref: string | null; booking_mode: "in_person" | "telehealth" | null; share_choice: "share" | "private" | null;
 }
+export interface PatientProfile { date_of_birth: string; phone: string; emergency_name: string | null; emergency_phone: string | null; updated_at: string }
 export interface Page<T> { items: T[]; total: number; page: number; pageSize: number }
 export interface DashboardData {
   counts: { upcoming: number; past: number; prepared: number; open_tasks: number; done_tasks: number };

@@ -77,6 +77,8 @@ sharesRouter.post("/shares", (req, res) => {
   // The raw token is returned once and never stored; a database leak does not expose live links.
   db.prepare("INSERT INTO appointment_shares (id, user_id, appointment_id, token_hash, expires_at) VALUES (?,?,?,?,?)")
     .run(id, uid, apptId, sha(token), new Date(Date.now() + b.expires_in_days * 864e5).toISOString());
+  db.prepare(`INSERT INTO brief_share_choices (appointment_id, user_id, choice) VALUES (?,?,'share')
+              ON CONFLICT(appointment_id) DO UPDATE SET choice='share', decided_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')`).run(apptId, uid);
   const share = db.prepare(`SELECT ${SHARE_COLS} FROM appointment_shares WHERE id = ? AND user_id = ?`).get(id, uid) as unknown as ShareRow;
   logEvent({ user_id: uid, appointment_id: apptId, share_id: id }, "patient", "link_created", `Patient created a share link (expires in ${b.expires_in_days} day${b.expires_in_days === 1 ? "" : "s"})`);
   res.status(201).json({ share: withStatus(share), token, path: `/c/${token}` });

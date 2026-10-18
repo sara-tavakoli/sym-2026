@@ -9,6 +9,7 @@ import "./schema-circle.js";
 import "./schema-shares.js";
 import "./schema-nudges.js";
 import "./schema-followthrough.js";
+import "./schema-booking.js";
 import { authRouter } from "./routes/auth.js";
 import { appointmentsRouter } from "./routes/appointments.js";
 import { dashboardRouter } from "./routes/dashboard.js";
@@ -26,6 +27,7 @@ import { importRouter } from "./routes/import.js";
 import { attentionRouter } from "./routes/attention.js";
 import { findCareRouter } from "./routes/find-care.js";
 import { notificationsRouter } from "./routes/notifications.js";
+import { bookingRouter, profileRouter } from "./routes/booking.js";
 
 export function createApp() {
   ensureDemoDirectory();
@@ -53,6 +55,8 @@ export function createApp() {
   app.use("/api/drafts", draftsRouter);
   app.use("/api/fit-finder", fitFinderRouter);
   app.use("/api/find-care", findCareRouter);
+  app.use("/api/booking", bookingRouter);
+  app.use("/api/profile", profileRouter);
   app.use("/api/dashboard/attention", attentionRouter);
   app.use("/api/dashboard", dashboardRouter);
   app.use("/api/notifications", notificationsRouter);

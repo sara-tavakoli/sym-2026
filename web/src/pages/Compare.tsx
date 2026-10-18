@@ -49,6 +49,7 @@ export default function Compare() {
                   <div className="cmp-name">{it.provider.name}</div>
                   <div className="small muted">{it.provider.clinic.name}</div>
                   {it.provider.is_fictional && <span className="badge warn">Fictional demo</span>}
+                  <div style={{ marginTop: ".5rem" }}><Link className="btn sm primary" to={`/app/book/${encodeURIComponent(it.provider.id)}${prefs.mode === "telehealth" ? "?mode=telehealth" : ""}`}>Book<span className="sr-only"> {it.provider.name}</span></Link></div>
                 </th>
               ))}
             </tr>

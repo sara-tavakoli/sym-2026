@@ -9,11 +9,11 @@ import { ShareCard } from "../components/ShareCard";
 import { ClinicianPlans } from "../components/ClinicianPlans";
 import { markPlanImported, type SharesData } from "../lib/shares";
 
-/** Prepare → Share → Follow through: where this appointment is in the loop. */
+/** My journey for one appointment: Booked → Prepare → Share or keep → Visit → Follow through. */
 function Journey({ steps }: { steps: { label: string; href: string; done: boolean }[] }) {
   const now = steps.findIndex((s) => !s.done);
   return (
-    <ol className="journey" aria-label="Appointment journey">
+    <ol className="journey" aria-label="My journey">
       {steps.map((s, i) => (
         <li key={s.label} className={s.done ? "done" : i === now ? "now" : ""} aria-current={i === now ? "step" : undefined}>
           {s.href.startsWith("#") ? <a href={s.href}><span className="dot">{s.done ? "✓" : i + 1}</span>{s.label}<span className="sr-only">{s.done ? " (done)" : ""}</span></a>
@@ -77,15 +77,18 @@ export default function AppointmentDetail() {
         </div>
       </header>
       <Journey steps={[
+        { label: appt.booking_ref ? "Booked" : "Added", href: "#facts", done: true },
         { label: "Prepare", href: `/app/appointments/${appt.id}/prepare`, done: appt.prep_status === "confirmed" },
-        { label: "Share", href: "#share", done: shared },
+        { label: appt.share_choice === "private" ? "Kept private" : "Share", href: "#share", done: shared || appt.share_choice === "private" },
+        { label: "Visit", href: "#follow-up", done: isPast },
         { label: "Follow through", href: "#follow-up", done: appt.done_tasks > 0 && appt.open_tasks === 0 },
       ]} />
-      <dl className="facts">
+      <dl className="facts" id="facts">
+        {appt.booking_ref && <div><dt>Booking</dt><dd>{appt.booking_ref} · {appt.booking_mode === "telehealth" ? "Telehealth" : "In person"} <span className="muted small">(demo)</span></dd></div>}
         <div><dt>Service</dt><dd>{appt.service_type}</dd></div>
         <div><dt>Clinic</dt><dd>{appt.clinic_name}</dd></div>
         {appt.location && <div><dt>Location</dt><dd>{appt.location}</dd></div>}
-        {appt.purpose && <div><dt>Purpose</dt><dd>{appt.purpose}</dd></div>}
+        {appt.purpose && <div><dt>{appt.booking_ref ? "Reason for visit" : "Purpose"}</dt><dd>{appt.purpose}</dd></div>}
       </dl>
 
       <div className="detail-sections">
@@ -101,7 +104,7 @@ export default function AppointmentDetail() {
           </div>
         </section>
 
-        <div id="share"><ShareCard appt={appt} /></div>
+        <div id="share"><ShareCard appt={appt} onChoice={setAppt} /></div>
 
         <section className="panel section-pad" id="follow-up" aria-labelledby="fu-h">
           <div className="panel-head">

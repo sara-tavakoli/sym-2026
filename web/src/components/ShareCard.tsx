@@ -6,13 +6,14 @@ import { AuditTimeline } from "./AuditTimeline";
 import { useApp } from "../lib/app-context";
 import { Spinner } from "./ui";
 import "../shares.css";
+import "../booking.css";
 
 const STATUS: Record<Share["status"], { label: string; cls: string }> = {
   active: { label: "Active", cls: "ok" }, expired: { label: "Expired", cls: "" }, revoked: { label: "Revoked", cls: "danger" },
 };
 
-/** Patient side of the clinician share loop: create a link, copy it once, see views and revoke. */
-export function ShareCard({ appt }: { appt: Appointment }) {
+/** Patient side of the clinician share loop: decide whether to share, create a link, copy it once, see views and revoke. */
+export function ShareCard({ appt, onChoice }: { appt: Appointment; onChoice?: (a: Appointment) => void }) {
   const { notify } = useApp();
   const [data, setData] = useState<SharesData | null>(null);
   const [events, setEvents] = useState<ShareEvent[]>([]);
@@ -48,20 +49,45 @@ export function ShareCard({ appt }: { appt: Appointment }) {
     catch (e) { notify(e instanceof ApiError ? e.message : "Could not revoke", "error"); } finally { setBusy(""); }
   }
 
+  async function decide(choice: "share" | "private") {
+    setBusy(choice); setError("");
+    try { onChoice?.(await api.put<Appointment>(`/appointments/${appt.id}/share-choice`, { choice })); }
+    catch (e) { setError(e instanceof ApiError ? e.message : "Couldn't save your choice"); } finally { setBusy(""); }
+  }
+
   const hasBrief = appt.prep_status === "draft" || appt.prep_status === "confirmed";
+  // The recorded answer wins (making a link records "share"); older links without one also count as sharing.
+  const choice = appt.share_choice ?? (data?.shares.length ? "share" : null);
   const addressed = data?.questions.filter((q) => q.addressed_at).length ?? 0;
 
   return (
     <section className="card" aria-labelledby="share-h">
       <div className="card-head"><h2 id="share-h">Share with your clinician</h2>
         {data && data.shares.some((s) => s.status === "active") && <span className="badge ok">Link active</span>}</div>
-      <p className="muted">Send your brief to your GP before or during the visit. They can tick off your questions as they go and send you an after-visit plan, which you can turn into a checklist here.</p>
+      <p className="muted">Sharing is your choice. If you share, your clinician can read your brief before or during the visit, tick off your questions as they go and send you an after-visit plan, which you can turn into a checklist here. Or keep the brief for yourself and bring it along.</p>
 
       {error && <div className="alert error" role="alert">{error}</div>}
 
       {!hasBrief ? (
         <div className="alert info">Prepare and save a brief for this appointment first. Then you can share it. <Link to={`/app/appointments/${appt.id}/prepare`}>Prepare your brief</Link></div>
       ) : (
+        <>
+          <h3 className="sr-only">Share your brief with your clinician?</h3>
+          <div className="share-choice" role="group" aria-label="Share your brief with your clinician?">
+            <button type="button" aria-pressed={choice === "share"} onClick={() => decide("share")} disabled={!!busy}>
+              <strong>{busy === "share" && <Spinner />} Yes, share with my clinician</strong><span>Create a private link that expires. You can revoke it anytime.</span>
+            </button>
+            <button type="button" aria-pressed={choice === "private"} onClick={() => decide("private")} disabled={!!busy || !!data?.shares.some((s) => s.status === "active")}>
+              <strong>{busy === "private" && <Spinner />} No, keep it for myself</strong><span>{data?.shares.some((s) => s.status === "active") ? "Revoke your active link first." : "Nothing is sent. Print it or open it on your phone at the visit."}</span>
+            </button>
+          </div>
+          {choice === "private" && (
+            <div className="alert info" role="status">Your brief stays private to you. <Link to={`/app/appointments/${appt.id}/brief`}>Open your printable brief</Link> to take along. You can change your mind and share it later.</div>
+          )}
+        </>
+      )}
+
+      {hasBrief && choice === "share" && (
         <>
           {appt.prep_status === "draft" && <div className="alert warn">Your brief is still a draft. Your clinician will see it marked "Draft, not yet confirmed by patient". You can confirm it first in preparation.</div>}
           <div className="row share-create">

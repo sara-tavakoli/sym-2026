@@ -84,7 +84,7 @@ for (const [label, viewport, scheme] of [["desktop-light", { width: 1280, height
   if (label === "desktop-light") {
     // Add to my appointments (prefilled form, nothing booked)
     await page.goto(base + "/app/fit-finder?category=optometrist&location=Macquarie%20Park");
-    await page.locator(".provider-card").first().getByRole("button", { name: "Add to my appointments" }).click();
+    await page.locator(".provider-card").first().getByRole("button", { name: "Already booked? Add it" }).click();
     ok("appointment form prefilled from provider", (await page.locator('input[name="clinic_name"]').inputValue()).includes("(Demo)"));
     await page.getByRole("button", { name: "Cancel" }).click();
 

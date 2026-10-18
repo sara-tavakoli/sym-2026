@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import rateLimit from "express-rate-limit";
 import { db } from "../db.js";
 import { newId, requireAuth } from "../auth.js";
 import { chatLimiter } from "../ai/limit.js";
@@ -9,8 +10,15 @@ import { directory, ACCESS_FEATURES } from "../providers/directory.js";
 import { DAYS, RADII, bboxAround, evaluate, prefsSchema, search } from "../providers/matching.js";
 
 // Fit Finder: deterministic provider matching over the directory. AI is used only to read the user's request.
+// Searching the (fictional, read-only) directory is public so people can find a clinic before signing in;
+// reading a request with AI and saved searches need an account.
 export const fitFinderRouter = Router();
-fitFinderRouter.use(requireAuth);
+const publicLimiter = rateLimit({
+  windowMs: 60_000, limit: Number(process.env.FIT_FINDER_RATE_LIMIT_PER_MIN ?? 120), standardHeaders: true, legacyHeaders: false,
+  message: { error: "Too many searches. Please wait a moment and try again." },
+});
+fitFinderRouter.use(["/meta", "/search", "/compare"], publicLimiter);
+fitFinderRouter.use(["/extract", "/saved"], requireAuth);
 
 fitFinderRouter.get("/meta", (_req, res) => {
   res.json({

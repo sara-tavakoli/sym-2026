@@ -20,6 +20,7 @@ User data (every table carries `user_id`; every query filters on it; deletes cas
 
 Clinician loop: `appointment_shares` (token stored as SHA-256, expiry, revocation, view count) · `share_question_marks` · `clinician_plans`.
 Care circle: `care_invites` (hashed token) · `care_members` (owner, member, role `viewer`/`helper`, unique per pair) · `care_activity`.
+Booking: `patient_profiles` (one per user) · `bookings` (appointment ↔ directory provider, `CP-` reference, unique `(provider_id, starts_at)` so a time is booked once) · `brief_share_choices` (share / keep private, per appointment).
 
 **Multi-user access model.** A patient's rows carry their `user_id` and owner routes filter on it. Other people reach a patient's data only through one of two narrow doors: a clinician **share token** (read the brief, tick questions, post a plan; nothing else) or **care-circle membership**, checked on every request by a single helper (viewer = read confirmed briefs and tasks; helper = also update and take tasks). Supporters never see preparation notes, drafts, raw instructions or emails. Every child table carries `user_id` (or `owner_id`) and every query filters on it. Deleting a user or appointment cascades. Indexes: `appointments(user_id, starts_at)`, `follow_up_tasks(user_id, status)`, `follow_up_tasks(appointment_id)`, `sessions(user_id)`, `brief_source_refs(brief_id)`.
 
@@ -45,7 +46,8 @@ Indexes: `appointments(user_id, starts_at)`, `follow_up_tasks(user_id, status)`,
 - Each preference gets a status from stored attributes: **met**, **partial** (e.g. bulk billing for *some* patients), **not met** (verified negative), or **not verified** (missing or unverified data).
 - Ranking: most preferences met → most partly met → fewest not met → nearest → name. The UI states this rule and shows "Meets X of Y" counts — no percentages.
 - "Only show providers that meet every preference" removes providers with a *not met* preference; unverified ones stay (and are labelled).
-- Opening hours are always labelled as published hours, not appointment availability. No booking slots, fees or eligibility are ever generated.
+- Opening hours are always labelled as published hours, not appointment availability. Fit Finder never generates fees or eligibility.
+- **Demo booking** (`server/src/booking/slots.ts`, `routes/booking.ts`): bookable times are 30-minute steps inside a fictional clinic's published hours (Sydney time) for the next 14 days, at least an hour ahead, minus times already booked. The server re-derives the open times on confirm, refuses anything else (409), requires a patient profile (422) and inserts the appointment and booking in one transaction; the unique slot index settles two people confirming the same time. Viewing times is public; confirming needs an account. Labelled throughout as a demo: no real clinic is contacted.
 - Directory access goes through the `ProviderDirectory` interface (`server/src/providers/directory.ts`); a verified external provider API can be added as another implementation without touching matching or the UI.
 
 ### Demo provider data

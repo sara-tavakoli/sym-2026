@@ -28,7 +28,10 @@ const SELECT = `
     (SELECT COUNT(*) FROM follow_up_tasks t WHERE t.appointment_id = a.id AND t.status != 'completed') AS open_tasks,
     (SELECT COUNT(*) FROM follow_up_tasks t WHERE t.appointment_id = a.id AND t.status = 'completed') AS done_tasks,
     (SELECT COUNT(*) FROM visit_instructions i WHERE i.appointment_id = a.id) AS instruction_count,
-    (SELECT COUNT(*) FROM clinician_plans cp WHERE cp.appointment_id = a.id AND cp.imported_at IS NULL) AS pending_plans
+    (SELECT COUNT(*) FROM clinician_plans cp WHERE cp.appointment_id = a.id AND cp.imported_at IS NULL) AS pending_plans,
+    (SELECT bk.reference FROM bookings bk WHERE bk.appointment_id = a.id) AS booking_ref,
+    (SELECT bk.mode FROM bookings bk WHERE bk.appointment_id = a.id) AS booking_mode,
+    (SELECT sc.choice FROM brief_share_choices sc WHERE sc.appointment_id = a.id) AS share_choice
   FROM appointments a`;
 
 const listQuery = z.object({
@@ -70,6 +73,16 @@ appointmentsRouter.put("/:id", (req, res) => {
                         updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ? AND user_id = ?`)
     .run(b.starts_at, b.practitioner_name, b.service_type, b.clinic_name, b.location, b.purpose, req.params.id, req.user!.id);
   if (r.changes === 0) return res.status(404).json({ error: "Appointment not found" });
+  res.json(db.prepare(`${SELECT} WHERE a.id = ? AND a.user_id = ?`).get(req.params.id, req.user!.id));
+});
+
+// "Share brief with clinician?" Recording "private" makes keeping the brief to yourself an explicit, reversible choice.
+appointmentsRouter.put("/:id/share-choice", (req, res) => {
+  const { choice } = z.object({ choice: z.enum(["share", "private"]) }).parse(req.body);
+  if (!db.prepare("SELECT 1 FROM appointments WHERE id = ? AND user_id = ?").get(req.params.id, req.user!.id)) return res.status(404).json({ error: "Appointment not found" });
+  db.prepare(`INSERT INTO brief_share_choices (appointment_id, user_id, choice) VALUES (?,?,?)
+              ON CONFLICT(appointment_id) DO UPDATE SET choice=excluded.choice, decided_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')`)
+    .run(req.params.id, req.user!.id, choice);
   res.json(db.prepare(`${SELECT} WHERE a.id = ? AND a.user_id = ?`).get(req.params.id, req.user!.id));
 });
 

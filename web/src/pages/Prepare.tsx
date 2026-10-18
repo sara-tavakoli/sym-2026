@@ -32,7 +32,9 @@ export default function Prepare() {
   useEffect(() => {
     Promise.all([api.get<Appointment>(`/appointments/${id}`), api.get<{ notes: PrepNotes; brief: Brief | null }>(`/appointments/${id}/prep`)])
       .then(([a, p]) => {
-        setAppt(a); setNotes(p.notes); setBrief(p.brief);
+        const blank = Object.values(p.notes).every((v) => !v.trim());
+        // A booked visit starts from the reason the person gave when booking (their own words); they can edit it.
+        setAppt(a); setNotes(blank && a.booking_ref && a.purpose ? { ...p.notes, main_concern: a.purpose } : p.notes); setBrief(p.brief);
         if (p.brief) { adoptDraft(p.brief); setStep(p.brief.status === "confirmed" ? 3 : 2); }
       })
       .catch((e: ApiError) => setLoadError(e.status === 404 ? "We couldn't find that appointment." : e.message));

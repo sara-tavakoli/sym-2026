@@ -13,7 +13,7 @@ const nav: NavItem[] = [
   { to: "/app/follow-up", label: "Follow-up tracker", short: "Tasks", icon: "check" },
   { to: "/app/circle", label: "Care circle", short: "Circle", icon: "people" },
   { to: "/app/assistant", label: "AI Assistant", short: "Assistant", icon: "chat" },
-  { to: "/app/find-care", label: "Find care", short: "Find care", icon: "check" },
+  { to: "/app/get-care", label: "Book care", short: "Book", icon: "check" },
   { to: "/app/fit-finder", label: "Fit Finder", short: "Fit Finder", icon: "search" },
 ];
 const MOBILE = ["/app", "/app/appointments", "/app/assistant", "/app/fit-finder", "/app/follow-up"];

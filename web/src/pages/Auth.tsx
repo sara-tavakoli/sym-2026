@@ -4,6 +4,8 @@ import { api, ApiError, type User } from "../lib/api";
 import { useApp } from "../lib/app-context";
 import { Disclaimer, Field, Logo, Spinner } from "../components/ui";
 
+const BOOKING_RE = /^\/book\/[\w-]{1,80}(\?[\w=&%.:+-]*)?$/;
+
 export default function Auth({ mode }: { mode: "login" | "register" }) {
   const { user, loading, setUser } = useApp();
   const nav = useNavigate();
@@ -12,8 +14,13 @@ export default function Auth({ mode }: { mode: "login" | "register" }) {
   const [error, setError] = useState("");
   const isReg = mode === "register";
   const next = params.get("next");
-  // Only known in-app destinations are honoured (no open redirect); care circle invites come back to /join/<token>.
-  const dest = next && /^\/join\/[a-f0-9]{64}$/.test(next) ? next : next === "preparation" || next === "follow-up" ? `/app/${next}` : "/app";
+  // Only known in-app destinations are honoured (no open redirect); care circle invites come back to /join/<token>,
+  // a booking in progress comes back to /book/<provider>?slot=…, and public care pages come back to themselves.
+  const dest = next && /^\/join\/[a-f0-9]{64}$/.test(next) ? next
+    : next && BOOKING_RE.test(next) ? next
+    : next && /^\/(get-care|find-care|search)(\?[\w=&%.:,+-]*)?$/.test(next) ? next
+    : next === "preparation" || next === "follow-up" ? `/app/${next}` : "/app";
+  const booking = !!next && BOOKING_RE.test(next);
   const keep = next ? `?next=${encodeURIComponent(next)}` : "";
 
   if (!loading && user) return <Navigate to={dest} replace />;
@@ -38,6 +45,7 @@ export default function Auth({ mode }: { mode: "login" | "register" }) {
         <div className="card">
           <h1 style={{ fontSize: "1.5rem" }}>{isReg ? "Create your account" : "Welcome back"}</h1>
           <p className="muted small">{isReg ? "Demo use only — please use fictional information." : "Log in to see your appointments and tasks."}</p>
+          {booking && <div className="alert info" role="note">{isReg ? "Create an account" : "Sign in"} to finish your booking. Your chosen time is kept and you'll come straight back to confirm it.</div>}
           {error && <div className="alert error" role="alert">{error}</div>}
           <form onSubmit={submit}>
             {isReg && <Field label="Name"><input name="name" autoComplete="name" required maxLength={100} /></Field>}

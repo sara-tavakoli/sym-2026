@@ -24,6 +24,7 @@ await alex.goto(base + "/app/appointments");
 await alex.locator(".appt-row", { hasText: "Dr Priya Lee" }).first().locator("a").click();
 await alex.getByRole("heading", { name: "Dr Priya Lee" }).waitFor();
 const apptUrl = alex.url();
+await alex.getByRole("button", { name: /Yes, share with my clinician/ }).click();
 await alex.getByRole("button", { name: "Create share link" }).click();
 const link = await alex.getByLabel("Your clinician link").inputValue();
 console.log("share link", link);

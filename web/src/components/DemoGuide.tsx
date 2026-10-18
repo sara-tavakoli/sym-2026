@@ -28,15 +28,15 @@ const STEPS: Step[] = [
     go: (s) => (s?.briefApptId ? `/app/appointments/${s.briefApptId}` : "/app/follow-up"), auto: (s) => !!s?.planImported },
   { id: "circle", time: "2:25", title: "Show the care circle", hint: "Care circle → Mia took the blood test → People I support → Grandpa Joe.",
     go: () => "/app/circle", auto: (_s, v) => v.has("circle") },
-  { id: "find", time: "2:40", title: "Find care that fits", hint: "Not sure where to start? Answer four questions, then See matching services in Fit Finder.",
-    go: () => "/app/find-care", auto: (_s, v) => v.has("find") },
+  { id: "find", time: "2:40", title: "Book care", hint: "Book care → Help me find care: describe a concern, see the summary and pathway, pick a clinic and a time, confirm.",
+    go: () => "/app/get-care", auto: (_s, v) => v.has("find") },
 ];
 
 function visitKey(path: string): string | null {
   if (path === "/app") return "dashboard";
   if (/^\/app\/appointments\/[^/]+$/.test(path)) return "appointment";
   if (path.startsWith("/app/circle") || path.startsWith("/app/supporting")) return "circle";
-  if (path.startsWith("/app/find-care") || path.startsWith("/app/fit-finder")) return "find";
+  if (["/app/get-care", "/app/find-care", "/app/fit-finder", "/app/book/"].some((p) => path.startsWith(p))) return "find";
   return null;
 }
 

@@ -39,7 +39,7 @@ function actionsFor(intent: Intent, selfHarm: boolean, appts: { id: string; prac
         { label: appts.length ? "Add another appointment" : "Add an appointment", href: "/app/appointments?new=1", kind: "internal" },
       ];
     case "find_provider":
-      return [{ label: "Open Fit Finder", href: "/app/fit-finder", kind: "internal" }, { label: "Healthdirect: Find a health service", href: HEALTHDIRECT_SERVICES, kind: "external" }];
+      return [{ label: "Book care", href: "/app/get-care", kind: "internal" }, { label: "Open Fit Finder", href: "/app/fit-finder", kind: "internal" }, { label: "Healthdirect: Find a health service", href: HEALTHDIRECT_SERVICES, kind: "external" }];
     case "share":
       return appts.slice(0, 3).map((a) => ({ label: `Share: ${a.practitioner_name} · ${day(a.starts_at)}`, href: `/app/appointments/${a.id}`, kind: "internal" as const }))
         .concat(appts.length ? [] : [{ label: "Add an appointment", href: "/app/appointments?new=1", kind: "internal" as const }]);

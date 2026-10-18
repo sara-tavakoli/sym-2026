@@ -1,11 +1,11 @@
-// Browser check of "Find care that fits" (public + signed in), the red-flag path and the demo guide. No AI calls.
+// Browser check of "Help me find care" (public + signed in), the red-flag path and the demo guide. No AI calls.
 import { chromium } from "playwright-core";
 import { mkdirSync } from "node:fs";
 
 const base = process.env.BASE ?? "http://localhost:4000";
 const shots = process.env.SHOTS ?? "shots";
 mkdirSync(shots, { recursive: true });
-const browser = await chromium.launch();
+const browser = await chromium.launch(process.env.BROWSER_CHANNEL ? { channel: process.env.BROWSER_CHANNEL } : {});
 const problems: string[] = [];
 const ok = (name: string, cond: boolean, detail = "") => { if (!cond) problems.push(`${name} ${detail}`); console.log(cond ? "PASS" : "FAIL", name, cond ? "" : detail); };
 
@@ -18,7 +18,7 @@ for (const [label, viewport, scheme] of [["desktop", { width: 1280, height: 900 
 
   // 1. Red-flag path on the public page.
   await page.goto(base + "/find-care");
-  await page.getByRole("heading", { name: "Find care that fits" }).waitFor();
+  await page.getByRole("heading", { name: "Help me find care" }).waitFor();
   await page.getByLabel(/In your own words/).fill("My dad has chest pain and can't breathe properly");
   const alert = page.getByRole("alert").filter({ hasText: "Call 000" });
   await alert.waitFor();
@@ -29,7 +29,7 @@ for (const [label, viewport, scheme] of [["desktop", { width: 1280, height: 900 
   await page.getByRole("link", { name: "Call Lifeline 13 11 14" }).waitFor();
   ok(`${label}: Lifeline shown for self-harm`, (await page.getByRole("link", { name: "Call Lifeline 13 11 14" }).getAttribute("href")) === "tel:131114");
 
-  // 2. Questionnaire -> suggestion -> Fit Finder prefilled (signed out: opens a demo sandbox).
+  // 2. Questionnaire -> summary + suggestion -> public clinic search prefilled (no account needed to look).
   await page.getByLabel(/In your own words/).fill("Sore ankle after a fall");
   await page.locator(".fc-chip", { hasText: "Physiotherapist" }).waitFor();
   ok(`${label}: Might suit chip appears while typing`, true);
@@ -48,15 +48,20 @@ for (const [label, viewport, scheme] of [["desktop", { width: 1280, height: 900 
   ok(`${label}: reason quotes the person's words`, (await page.locator(".fc-reason").innerText()).includes("“ankle”"));
   await overflow("result");
   await page.screenshot({ path: `${shots}/findcare-result-${label}.png`, fullPage: true });
-  await page.getByRole("button", { name: "See matching services" }).click();
-  await page.waitForURL(/\/app\/fit-finder\?/);
+  ok(`${label}: summary repeats the person's words`, (await page.locator(".fc-summary").innerText()).includes("Sore ankle after a fall"));
+  await page.getByRole("button", { name: "Find a clinic and book" }).click();
+  await page.waitForURL(/\/search\?/);
   const url = new URL(page.url());
   ok(`${label}: Fit Finder prefilled`, url.searchParams.get("category") === "physiotherapist" && url.searchParams.get("location") === "Macquarie Park" && url.searchParams.get("mode") === "in_person", url.search);
   await page.locator(".provider-card, article").first().waitFor();
   ok(`${label}: Fit Finder shows results`, (await page.locator("article").count()) > 0);
   await page.screenshot({ path: `${shots}/fitfinder-prefilled-${label}.png`, fullPage: false });
 
-  // 3. Demo guide (now signed in to a /try sandbox).
+  // 3. Demo guide (sign in to a /try sandbox, then open Book care).
+  await page.goto(base + "/try");
+  await page.waitForURL(/\/app$/);
+  await page.goto(base + "/app/get-care");
+  await page.getByRole("heading", { name: "Do you know what kind of care you need?" }).waitFor();
   const fab = page.getByRole("button", { name: /Demo guide/ });
   await fab.waitFor();
   if (label === "phone") {
@@ -76,9 +81,9 @@ for (const [label, viewport, scheme] of [["desktop", { width: 1280, height: 900 
 
   // 4. Signed-in route + dashboard link.
   await page.goto(base + "/app");
-  await page.getByRole("link", { name: "Find care that fits" }).click();
+  await page.getByRole("link", { name: "Help me find care" }).click();
   await page.waitForURL(/\/app\/find-care$/);
-  await page.getByRole("heading", { name: "Find care that fits" }).waitFor();
+  await page.getByRole("heading", { name: "Help me find care" }).waitFor();
   await overflow("/app/find-care");
   await page.screenshot({ path: `${shots}/findcare-app-${label}.png`, fullPage: true });
   await page.context().close();

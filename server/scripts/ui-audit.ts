@@ -67,6 +67,7 @@ console.log("priya", priya?.id, "past", past?.id);
 // Share link
 await sp.goto(`${base}/app/appointments/${priya.id}`);
 let shareLink = "";
+await sp.getByRole("button", { name: /Yes, share with my clinician/ }).click({ timeout: 8000 }).catch(() => {});
 const shareBtn = sp.getByRole("button", { name: "Create share link" });
 await shareBtn.waitFor({ timeout: 8000 }).catch(() => {});
 if (await shareBtn.count()) {

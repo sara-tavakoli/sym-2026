@@ -76,10 +76,10 @@ function NoNextAppointment() {
       <div className="hero-body">
         <p className="eyebrow">Next appointment</p>
         <h2 id="next-h" className="hero-title">No upcoming appointments</h2>
-        <p className="hero-meta">Add one to prepare your questions before you go, or find a service that suits your needs.</p>
+        <p className="hero-meta">Feeling unwell or need a check-up? Find the right kind of care, choose a clinic and a time, and book. Already booked somewhere else? Add it here.</p>
         <div className="row hero-actions">
-          <Link className="btn primary" to="/app/appointments?new=1">Add an appointment</Link>
-          <Link className="btn ghost" to="/app/fit-finder">Find a service</Link>
+          <Link className="btn primary" to="/app/get-care">Book care</Link>
+          <Link className="btn ghost" to="/app/appointments?new=1">Add an existing appointment</Link>
         </div>
       </div>
     </section>
@@ -99,7 +99,7 @@ function AssistantEntry() {
         <input id="assist-q" value={text} maxLength={2000} onChange={(e) => setText(e.target.value)} placeholder="What do you need help with?" />
         <button className="btn">Open assistant</button>
       </form>
-      <p className="fine">It won't diagnose or give medical advice. Not sure what kind of service you need? <Link to="/app/find-care">Find care that fits</Link>.</p>
+      <p className="fine">It won't diagnose or give medical advice. Not sure what kind of service you need? <Link to="/app/find-care">Help me find care</Link>.</p>
     </section>
   );
 }
@@ -133,7 +133,10 @@ export default function Dashboard() {
           <p className="eyebrow">{new Date().toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" })}</p>
           <h1>{greeting()}, {user?.name.split(" ")[0]}</h1>
         </div>
-        <Link className="btn primary" to="/app/appointments?new=1"><Plus /> New appointment</Link>
+        <div className="row">
+          <Link className="btn" to="/app/appointments?new=1"><Plus /> Add existing</Link>
+          <Link className="btn primary" to="/app/get-care">Book care</Link>
+        </div>
       </header>
 
       {error && <div className="alert error" role="alert">{error} <button className="btn sm" onClick={() => { setError(""); load(); }}>Retry</button></div>}
