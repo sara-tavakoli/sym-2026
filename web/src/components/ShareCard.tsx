@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError, fmtDateTime, type Appointment } from "../lib/api";
-import { copyText, type Share, type SharesData } from "../lib/shares";
+import { copyText, type Share, type ShareEvent, type SharesData } from "../lib/shares";
+import { AuditTimeline } from "./AuditTimeline";
 import { useApp } from "../lib/app-context";
 import { Spinner } from "./ui";
 import "../shares.css";
@@ -14,6 +15,7 @@ const STATUS: Record<Share["status"], { label: string; cls: string }> = {
 export function ShareCard({ appt }: { appt: Appointment }) {
   const { notify } = useApp();
   const [data, setData] = useState<SharesData | null>(null);
+  const [events, setEvents] = useState<ShareEvent[]>([]);
   const [days, setDays] = useState(7);
   const [link, setLink] = useState("");
   const [copied, setCopied] = useState(false);
@@ -23,6 +25,7 @@ export function ShareCard({ appt }: { appt: Appointment }) {
 
   const load = useCallback(() => {
     api.get<SharesData>(`/appointments/${appt.id}/shares`).then(setData).catch((e) => setError(e.message));
+    api.get<{ events: ShareEvent[] }>(`/appointments/${appt.id}/share-activity`).then((r) => setEvents(r.events)).catch(() => setEvents([]));
   }, [appt.id]);
   useEffect(load, [load, appt.prep_status]);
 
@@ -117,6 +120,12 @@ export function ShareCard({ appt }: { appt: Appointment }) {
             ))}
           </ul>
           <p className="small muted" style={{ margin: 0 }}>Your clinician can tick questions off on the shared page during your visit.</p>
+        </div>
+      )}
+
+      {events.length > 0 && (
+        <div className="share-activity">
+          <AuditTimeline compact events={events} title="Activity" limit={5} />
         </div>
       )}
     </section>

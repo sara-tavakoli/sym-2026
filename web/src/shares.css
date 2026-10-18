@@ -28,7 +28,7 @@
 
 /* Clinician page: standalone, no app shell */
 .cv-page { min-height: 100vh; background: var(--bg); padding-bottom: 3rem; }
-.cv-wrap { width: 100%; max-width: 820px; margin: 0 auto; padding: 0 16px; }
+.cv-wrap { width: 100%; max-width: 960px; margin: 0 auto; padding: 0 16px; }
 main.cv-wrap { padding-top: 1.25rem; }
 .cv-top { background: var(--surface); border-bottom: 1px solid var(--border); }
 .cv-top-row { display: flex; justify-content: space-between; align-items: center; min-height: 56px; }
@@ -75,3 +75,81 @@ label.cv-text { cursor: pointer; }
 }
 .plans { margin-bottom: 1.25rem; }
 .cv-head > .row { margin-bottom: .6rem; }
+
+/* ---------- Consult workspace (clinician page) ---------- */
+.cv-consult, .cv-wrap > .panel { padding-bottom: 1.15rem; }
+.cv-consult .panel-head { flex-wrap: wrap; align-items: center; }
+.cv-consult .panel-head h2 { font-size: 1.15rem; }
+.cv-badges { gap: .35rem; flex-wrap: wrap; }
+.cv-transcript-tools { margin-bottom: .75rem; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.cv-transcript { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85rem; line-height: 1.55; }
+.cv-transcript-view { white-space: pre-wrap; overflow-wrap: anywhere; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .83rem; line-height: 1.6; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .8rem 1rem; max-height: 420px; overflow: auto; margin: 0 0 .75rem; }
+.cv-source-note { margin: .25rem 0 .9rem; }
+.cv-approved { background: var(--ok-soft); color: var(--ok); border-radius: 10px; padding: .8rem 1rem; margin-bottom: .9rem; }
+.cv-tabs { margin-bottom: 1rem; overflow-x: auto; }
+.cv-tabs button { white-space: nowrap; }
+.cv-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }
+@media (min-width: 900px) { .cv-grid { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); } }
+.cv-sub { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; font-size: .95rem; margin: 0 0 .6rem; }
+.cv-sub .small { font-weight: 400; }
+.cv-notes label, .cv-approve label[for] { display: flex; align-items: center; gap: .4rem; }
+.cv-edited { font-size: .7rem; }
+.cv-readonly { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .55rem .75rem; font-size: .93rem; }
+.cv-ins-list { list-style: none; margin: 0 0 .75rem; padding: 0; display: grid; gap: .6rem; }
+.cv-ins { border: 1px solid var(--border); border-left: 3px solid var(--border-strong); border-radius: var(--radius-sm); padding: .6rem .7rem; background: var(--surface); }
+.cv-ins.approved { border-left-color: var(--ok); background: color-mix(in srgb, var(--ok-soft) 45%, var(--surface)); }
+.cv-ins-head { display: flex; align-items: center; gap: .45rem; flex-wrap: wrap; margin-bottom: .4rem; }
+.cv-ins-tick { display: inline-flex; align-items: center; gap: .35rem; font-weight: 700; color: var(--muted); cursor: pointer; }
+.cv-ins-tick input { width: 22px; height: 22px; min-height: 22px; margin: 0; accent-color: var(--ok); cursor: pointer; }
+.cv-ins-remove { margin-left: auto; }
+.cv-ins textarea { font-size: .93rem; }
+.cv-ins-src { margin-top: .35rem; font-size: .82rem; color: var(--muted); }
+.cv-ins-src summary { cursor: pointer; color: var(--accent); width: fit-content; }
+.cv-ins-src q { display: block; margin-top: .25rem; padding: .3rem .6rem; border-left: 3px solid var(--accent); background: var(--surface-2); border-radius: 0 6px 6px 0; font-style: italic; color: var(--text); }
+.cv-add { display: flex; gap: .5rem; }
+.cv-add input { flex: 1; min-width: 0; }
+.cv-approve { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.cv-save-row { margin-bottom: .75rem; }
+.cv-reviewed { display: flex; gap: .55rem; align-items: flex-start; margin: 0 0 .75rem; font-weight: 600; cursor: pointer; }
+.cv-reviewed input { width: 20px; height: 20px; min-height: 20px; margin: .1rem 0 0; flex: none; accent-color: var(--primary); }
+.cv-summary { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.cv-summary-text, .plan-summary-text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+.cv-summary-text { background: var(--primary-soft); border-radius: var(--radius-sm); padding: .8rem 1rem; }
+
+/* Before / After word diff */
+.ba-legend { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; margin-bottom: .75rem; }
+.ba-h { font-size: .95rem; margin: 1rem 0 .5rem; }
+.ba-row { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .6rem .8rem; margin-bottom: .5rem; background: var(--surface); }
+.ba-row.changed { border-color: color-mix(in srgb, var(--warn) 40%, var(--border)); background: color-mix(in srgb, var(--warn-soft) 40%, var(--surface)); }
+.ba-row-head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; flex-wrap: wrap; margin-bottom: .3rem; }
+.ba-label { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.ba-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .93rem; line-height: 1.6; }
+.ba del, .ba-legend del { background: var(--danger-soft); color: var(--danger); text-decoration-color: color-mix(in srgb, var(--danger) 60%, transparent); border-radius: 4px; padding: 0 .15rem; }
+.ba ins, .ba-legend ins { background: var(--ok-soft); color: var(--ok); text-decoration: none; font-weight: 600; border-radius: 4px; padding: 0 .15rem; }
+
+/* Audit timeline (clinician page and patient Activity) */
+.timeline-h { font-size: 1rem; margin: 0 0 .2rem; }
+.timeline.compact .timeline-h { font-size: .76rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); margin-bottom: .35rem; }
+.timeline-lede { margin: 0 0 .75rem; }
+.timeline-list { list-style: none; margin: 0 0 .5rem; padding: 0; position: relative; }
+.timeline-list::before { content: ""; position: absolute; left: 13px; top: 8px; bottom: 8px; width: 1px; background: var(--border); }
+.timeline-item { position: relative; display: flex; gap: .7rem; padding: .35rem 0; }
+.timeline-mark { position: relative; z-index: 1; flex: none; width: 27px; height: 27px; border-radius: 999px; display: grid; place-items: center; font-size: .66rem; font-weight: 800; background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+.actor-patient .timeline-mark { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.actor-clinician .timeline-mark { background: var(--primary); color: var(--surface); border-color: transparent; }
+.actor-ai .timeline-mark { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.timeline-body { min-width: 0; padding-top: .1rem; }
+.timeline-msg { font-size: .92rem; line-height: 1.4; overflow-wrap: anywhere; }
+.timeline-meta { font-size: .76rem; color: var(--muted); margin-top: .1rem; }
+.timeline.compact .timeline-msg { font-size: .87rem; }
+.share-activity { margin-top: 1.25rem; }
+
+/* Patient: plan released from an approved consult */
+.plan-summary { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .7rem .9rem; margin-bottom: .6rem; }
+.plan-summary h4 { margin: 0 0 .3rem; font-size: .76rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--primary); }
+.plan-exact { margin-bottom: .75rem; font-size: .92rem; }
+.plan-exact summary { cursor: pointer; color: var(--muted); font-weight: 600; padding: .2rem 0; }
+.plan-exact ol { margin: .4rem 0 0; padding-left: 1.3rem; display: grid; gap: .35rem; }
+.plan-exact .badge { font-size: .68rem; vertical-align: 1px; }
+@media (max-width: 600px) { .cv-add { flex-direction: column; } .cv-ins-remove { margin-left: 0; } }
+.cv-notes textarea, .cv-ins textarea { field-sizing: content; min-height: 4.5rem; max-height: 22rem; }
