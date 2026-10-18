@@ -173,10 +173,7 @@ strong, b { font-weight: 650; }
 .icon-link.mobile-only { display: none; }
 @media (max-width: 820px) { .icon-link.mobile-only { display: inline-grid; } }
 /* Small phones: the notification bell takes the place of the AI Preparation shortcut (Prepare is on every appointment). */
-@media (max-width: 440px) { .icon-link.mobile-only.hide-xs { display: none; } .header-actions { gap: .2rem; } }
-@media (max-width: 1499px) { .nav-full { display: none; } .nav-short { display: inline; } .topnav a { padding: .5rem .65rem; } }
-@media (max-width: 1279px) { .topnav a svg { display: none; } }
-@media (max-width: 1023px) { .topnav a svg { display: none; } .user-name { display: none; } }
+@media (max-width: 440px) { .icon-link.hide-xs { display: none; } .header-actions { gap: .2rem; } }
 @media (max-width: 820px) {
   .wrap { padding: 0 16px; }
   .topnav { display: none; }
@@ -1096,3 +1093,24 @@ span.task-check { width: 0; }
 
 /* Links inside the dark assistant band need the light highlight colour to stay readable. */
 .assist-band .fine a { color: var(--highlight); font-weight: 600; }
+
+/* ---------- Responsive header ----------
+   Label density follows the header's own width (container queries), not the screen width, so it holds on
+   wide monitors where the header is capped, on small laptops and at Windows display scaling. The nav only
+   gets the space left over and scrolls inside itself as a last resort, so it can never overlap the actions. */
+.header-row { container-type: inline-size; container-name: header; }
+.topnav { flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.topnav::-webkit-scrollbar { display: none; }
+.topnav a svg { display: none; }
+@container header (max-width: 1200px) { .nav-full { display: none; } .nav-short { display: inline; } .topnav a { padding: .5rem .65rem; } }
+@container header (max-width: 1120px) { .user-name { display: none; } }
+@container header (max-width: 1000px) { .wordmark, .wordmark-ai { display: none; } .topnav { margin-left: .25rem; } .topnav a { padding: .45rem .55rem; font-size: .86rem; } }
+@media (max-width: 400px) {
+  .header-row { gap: .5rem; }
+  .wordmark-ai { display: none; }
+  .wordmark { font-size: 1.1rem; }
+  .header-actions { gap: 0; }
+  .icon-link { width: 34px; height: 34px; }
+  /* Long button labels wrap instead of pushing the page wider than the screen. */
+  .btn { white-space: normal; max-width: 100%; text-align: center; height: auto; min-height: 40px; }
+}
