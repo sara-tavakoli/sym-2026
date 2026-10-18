@@ -369,14 +369,14 @@ await step("AI Preparation: list loads; Generate brief produces a brief to confi
 await step("refresh persistence: imported appointments, plan and circle activity survive reload", async () => {
   await alex.goto(base + "/app/appointments");
   await alex.reload();
-  await alex.locator(".appt-row", { hasText: "Dr Priya Example" }).first().waitFor();
-  await alex.locator(".appt-row", { hasText: "Mei Sample" }).first().waitFor();
+  await alex.locator(".appt-row", { hasText: "Dr Priya Example" }).first().waitFor().catch(() => { throw new Error("persistence check 1 failed: alex.locator(.appt-row, { hasText: Dr Priya Example }).f"); });
+  await alex.locator(".appt-row", { hasText: "Mei Sample" }).first().waitFor().catch(() => { throw new Error("persistence check 2 failed: alex.locator(.appt-row, { hasText: Mei Sample }).first()"); });
   await alex.goto(gpUrl);
   // The plan was turned into a checklist in an earlier step, so it now shows as imported and its tasks persist.
-  await alex.getByText(/earlier plans? already turned into a checklist/).first().waitFor();
-  await alex.getByText(/vitamin D 1000 IU/).first().waitFor();
+  await alex.getByText(/earlier plans? already turned into a checklist/).first().waitFor().catch(() => { throw new Error("persistence check 3 failed: alex.getByText(/earlier plans? already turned into a checkli"); });
+  await alex.locator(".task", { hasText: "vitamin D 1000 IU" }).first().waitFor().catch(() => { throw new Error("persistence check 4 failed: alex.getByText(/vitamin D 1000 IU/).first()"); });
   await alex.goto(base + "/app/circle");
-  await alex.locator(".feed").getByText(/Stand up slowly/).first().waitFor();
+  await alex.locator(".feed").getByText(/Stand up slowly/).first().waitFor().catch(() => { throw new Error("persistence check 5 failed: alex.locator(.feed).getByText(/Stand up slowly/).first()"); });
 });
 
 await step("carer: Settings → delete account → logged out", async () => {
