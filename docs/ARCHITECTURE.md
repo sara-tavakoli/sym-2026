@@ -6,13 +6,13 @@ Browser (React SPA) ──HTTPS──▶ Express API (stateless) ──▶ SQLit
                                    │                          ├─ user records (appointments, briefs, drafts, tasks, saved searches)
                                    │                          └─ provider directory (fictional demo data)
                                    ├──▶ Fit Finder matching (deterministic, no AI)
-                                   └──▶ AI client ──▶ Google Gemini API (primary)
-                                                  └─▶ Anthropic Claude API (automatic fallback)
+                                   └──▶ AI client ──▶ Groq gpt-oss-120b ─▶ gpt-oss-20b ─▶ (Gemini / Claude if keyed)
+                                                  └─▶ deterministic rules fallback (labelled), same verification
 ```
 Hosted on Railway: one Docker container, SQLite on a persistent volume at `/data`.
-One deployable: the API also serves the built SPA. The only third party that receives health text is the Gemini API, and only when the user asks for generation or sends an assistant message.
+One deployable: the API also serves the built SPA. The only third party that receives health text is the configured AI provider (Groq in production), and only when the user asks for generation or sends an assistant message.
 
-**Division of labour:** Gemini only interprets language (organising the user's words, reading search preferences). The server verifies every AI output, owns all links and actions, and does all provider filtering, ranking and comparison from stored data.
+**Division of labour:** the AI only interprets language (organising the user's words, reading search preferences). The server verifies every AI output, owns all links and actions, and does all provider filtering, ranking and comparison from stored data.
 
 ## Data model (SQLite)
 User data (every table carries `user_id`; every query filters on it; deletes cascade):

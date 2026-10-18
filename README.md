@@ -19,8 +19,7 @@ Try it: **Try the live demo** on the homepage creates a private sandbox account 
 
 ## Requirements
 - Node 22.13+ (uses the built-in `node:sqlite`).
-- For AI features: a Google Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey). Copy `.env.example` to `.env` and set `GEMINI_API_KEY`. The key is read only by the server and `.env` is git-ignored.
-- Without a key the app still starts and every non-AI feature works (accounts, appointments, notes, manual tasks, dashboard); AI generation returns a clear "not configured" error.
+- For AI features: any of `GROQ_API_KEY` (used in production: `openai/gpt-oss-120b`, then `openai/gpt-oss-20b`), `GEMINI_API_KEY` or `ANTHROPIC_API_KEY` in `.env` (git-ignored). Configured providers are tried in order; `AI_PROVIDER` moves one to the front. **Without any key, briefs, task extraction and consult drafting use a labelled rules-based fallback, and the assistant uses a keyword guide**, so every flow still works.
 
 ## Run
 
@@ -31,7 +30,9 @@ npm start          # API + built UI on http://localhost:4000
 npm test           # backend tests (in-memory DB, Gemini mocked: no key, no network, no cost)
 npm run typecheck
 npm run seed       # fictional demo account: demo@carepath.example / demo-password-1
-npm run eval       # real-model safety eval on synthetic cases (needs GEMINI_API_KEY; ~9 billable requests)
+npm run eval       # real-model safety eval on synthetic cases (needs an AI key; 35/35 pass on Groq gpt-oss-120b)
+npm run e2e        # Playwright judge journey: patient, clinician and carer in separate browsers (BASE=<url>)
+npm run ui-audit   # screenshots ~31 pages at desktop light + phone dark; flags overflow, console errors, unnamed controls
 npm run ui-smoke   # Edge/Playwright UI checks, desktop + mobile, light + dark (server must be running + seeded)
 npm run ui-fitfinder # Fit Finder, comparison, saved searches and draft briefs in the browser (no AI calls)
 npm run ui-ai-features # chat -> brief -> attach, assistant -> Fit Finder handoff, NL search (~8 Gemini calls)
@@ -46,7 +47,7 @@ Dev mode: `npm run dev:server` and `npm run dev:web` (Vite on :5173 proxies `/ap
 - **Database:** SQLite (Node built-in `node:sqlite`, WAL mode) at `DATABASE_PATH`. Full schema for all phases is created at startup.
 - **Auth:** scrypt password hashes; random session tokens in an httpOnly cookie, only the SHA-256 of the token is stored. Sessions live in the DB, so API instances are stateless.
 - **Authorisation:** every query filters on `user_id`; other users' records return 404.
-- **AI:** Google Gemini (`@google/genai`, default model `gemini-3.8-flash`, override with `GEMINI_MODEL`) using JSON-schema structured output. Output is validated with zod, then checked server-side: brief points must quote the patient's own words, task sources must be verbatim, medication wording is preserved and flagged, prompt-injection text is ignored. Timeout, per-user rate limit and a bounded queue protect the service.
+- **AI:** provider-agnostic client (Groq, Gemini, Claude) with JSON-schema structured output, zod validation and one retry; providers fall through on rate limits/outages, then to deterministic rules. Output is checked server-side: brief points must quote the patient's own words, task sources must be verbatim, medication wording is preserved and flagged, prompt-injection text is ignored, consult instructions must be traceable to the transcript.
 - **AI Assistant:** stateless chat (`POST /api/assistant/chat`); the conversation lives in browser memory only and is never stored. Gemini returns `{reply, intent}`; action buttons are chosen by the server from a fixed list and the user's own appointments. Emergency/self-harm messages get fixed 000/Lifeline wording without calling the model; replies containing diagnostic or dosing language are replaced. Separate hourly limit (`AI_CHAT_RATE_LIMIT_PER_HOUR`, default 60).
 
 ## Scalability: implemented vs proposed
@@ -56,14 +57,14 @@ Measured locally (one run, 50 concurrent connections): ~3,000 dashboard reads/s 
 ## Deployment
 Deployed on Railway from the `Dockerfile` (one container serves the API and the built UI):
 1. Attach a persistent volume at `/data` (the image sets `DATABASE_PATH=/data/carepath.db`, `NODE_ENV=production`, `TRUST_PROXY=1`).
-2. Set secrets in the platform, never in the repo: `GEMINI_API_KEY` and/or `ANTHROPIC_API_KEY` (with both, Claude is the automatic fallback; `AI_PROVIDER=claude` makes it primary). Optional: `GEMINI_MODEL`, `CLAUDE_MODEL`, the `AI_*` limits.
+2. Set secrets in the platform, never in the repo: `GROQ_API_KEY` (production) and optionally `GEMINI_API_KEY` / `ANTHROPIC_API_KEY`. `DEMO_RATE_LIMIT_PER_HOUR` (production: 300) controls one-click demo accounts per IP. Optional: `GEMINI_MODEL`, `CLAUDE_MODEL`, the `AI_*` limits.
 3. Serve over HTTPS (cookies are `Secure` in production). No local model or GPU is required.
 
-## Gemini quota
-A free-tier Gemini key is limited to **20 requests per day per model**. That is enough for a few manual checks, not for a demo or multiple users. Use a billing-enabled project for anything beyond that. When the quota is exhausted the app says so ("daily usage limit reached") and every non-AI feature keeps working. Approximate cost per action: assistant message 1 request, brief from chat 2, brief from notes 1, task extraction 1, natural-language search 1.
+## AI quota
+The Groq free tier allows about 8,000 tokens per minute per model. The app uses two models and then falls back to labelled rules, so a busy demo degrades gracefully instead of failing.
 
 ## Privacy note
-When a user generates a brief or extracts tasks, that text is sent to Google's Gemini API. Use fictional data only. Google's terms differ by tier: on the free tier, submitted content may be used to improve Google's products; on paid (billing-enabled) projects it is not used for that purpose. Use a paid project for anything beyond a demo, and review Google's current terms.
+When a user generates a brief, extracts tasks, drafts consult notes or chats with the assistant, that text is sent to the configured AI provider (Groq in production). Use fictional data only. Google's terms differ by tier: on the free tier, submitted content may be used to improve Google's products; on paid (billing-enabled) projects it is not used for that purpose. Use a paid project for anything beyond a demo, and review Google's current terms.
 
 ## Docs
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — architecture, AI safety design, scalability (implemented vs proposed)
