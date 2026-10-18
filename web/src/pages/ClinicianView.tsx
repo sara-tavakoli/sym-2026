@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, ApiError, fmtDateTime, SECTION_KEYS, type SectionKey } from "../lib/api";
-import { CLINICIAN_TITLES, type ClinicianPlan, type SharedPoint, type SharedView } from "../lib/shares";
+import { CLINICIAN_TITLES, type ClinicianPlan, type ConsultResponse, type SharedPoint, type SharedView } from "../lib/shares";
 import { Logo, Skeletons, Spinner } from "../components/ui";
+import { ConsultWorkspace } from "../components/ConsultWorkspace";
+import { AuditTimeline } from "../components/AuditTimeline";
 import "../shares.css";
 
 const PLACEHOLDER = "Blood test (FBC, iron studies) this week. Book a review in 2 weeks. Continue current medication as prescribed. Call if symptoms worsen.";
@@ -31,8 +33,10 @@ export default function ClinicianView() {
     }));
     set(want ? new Date().toISOString() : null); // optimistic; reverted if the server refuses
     try { set((await api.post<{ addressed_at: string | null }>(`/share/${token}/questions/${p.id}`, { addressed: want })).addressed_at); }
-    catch (e) { set(p.addressed_at ?? null); setError(e instanceof ApiError ? e.message : "Could not save. Please try again."); }
+    catch (e) { set(p.addressed_at ?? null); setError(e instanceof ApiError ? e.message : "Could not save. Please try again."); return; }
+    refreshEvents();
   }
+  const refreshEvents = () => api.get<ConsultResponse>(`/share/${token}/consult`).then((r) => setView((v) => v && { ...v, events: r.events })).catch(() => {});
 
   if (gone) return (
     <div className="cv-page"><main className="cv-wrap"><div className="card empty cv-gone">
@@ -102,7 +106,14 @@ export default function ClinicianView() {
           <footer className="cv-foot">Shared by the patient from CarePath, an organisational tool. Content is the patient's own words, organised by software and reviewed by the patient. It is not medical advice, a diagnosis or a clinical record.</footer>
         </article>
 
-        <PlanForm token={token!} name={name} initial={view.plans} />
+        <ConsultWorkspace token={token!} name={name} initial={view.consult}
+          onEvents={(events) => setView((v) => v && { ...v, events })} onPlans={(plans) => setView((v) => v && { ...v, plans })} />
+
+        <PlanForm key={view.plans.length} token={token!} name={name} initial={view.plans} onSent={refreshEvents} />
+
+        <section className="panel no-print" aria-label="Audit timeline">
+          <AuditTimeline events={view.events} lede="Who did what, and when: every drafting step and human approval on this shared visit. The patient sees the same list." />
+        </section>
       </main>
     </div>
   );
@@ -130,7 +141,7 @@ function Point({ p, n, section, showAll, onToggle }: { p: SharedPoint; n: number
   );
 }
 
-function PlanForm({ token, name, initial }: { token: string; name: string; initial: ClinicianPlan[] }) {
+function PlanForm({ token, name, initial, onSent }: { token: string; name: string; initial: ClinicianPlan[]; onSent: () => void }) {
   const [author, setAuthor] = useState(readAuthor);
   const [text, setText] = useState("");
   const [plans, setPlans] = useState(initial);
@@ -143,7 +154,7 @@ function PlanForm({ token, name, initial }: { token: string; name: string; initi
     setBusy(true); setError({ msg: "", fields: {} });
     try {
       const r = await api.post<{ plan: ClinicianPlan; plans: ClinicianPlan[] }>(`/share/${token}/plan`, { author, text });
-      setPlans(r.plans); setSent(r.plan); setText("");
+      setPlans(r.plans); setSent(r.plan); setText(""); onSent();
       try { localStorage.setItem(AUTHOR_KEY, author.trim()); } catch { /* storage unavailable */ }
     } catch (err) {
       if (err instanceof ApiError) setError({ msg: err.message, fields: Object.fromEntries(err.fields.map((f) => [f.path, f.message])) });
@@ -153,7 +164,7 @@ function PlanForm({ token, name, initial }: { token: string; name: string; initi
 
   return (
     <section className="card cv-plan no-print" aria-labelledby="plan-h">
-      <h2 id="plan-h">Send an after-visit plan to {name}</h2>
+      <h2 id="plan-h">Or write a quick after-visit plan for {name}</h2>
       {sent ? (
         <div className="cv-sent" role="status">
           <strong>Sent to {name}.</strong> They'll see "New after-visit plan from {sent.author}" in CarePath and can turn it into a checklist.
@@ -161,7 +172,7 @@ function PlanForm({ token, name, initial }: { token: string; name: string; initi
         </div>
       ) : (
         <form onSubmit={submit} noValidate>
-          <p className="small muted">Write it as you would in a note to the patient. They review it and decide what goes on their checklist; nothing is changed by software.</p>
+          <p className="small muted">No transcript? Write it as you would in a note to the patient. They review it and decide what goes on their checklist; nothing is changed by software.</p>
           {error.msg && !Object.keys(error.fields).length && <div className="alert error" role="alert">{error.msg}</div>}
           <div className="field">
             <label htmlFor="plan-author">Your name and role</label>

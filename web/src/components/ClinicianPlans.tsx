@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, fmtDateTime } from "../lib/api";
-import type { ClinicianPlan } from "../lib/shares";
+import { KIND_LABELS, type ClinicianPlan } from "../lib/shares";
 import "../shares.css";
 
 /** After-visit plans sent back by a clinician through a share link. Pending plans can be turned into a checklist. */
@@ -24,8 +24,21 @@ export function ClinicianPlans({ appointmentId, reloadKey, activeId, onUse }:
             <h3 style={{ margin: 0 }}>New after-visit plan from {p.author}</h3>
             <span className="badge info">From your clinician</span>
           </div>
-          <p className="small muted" style={{ margin: ".15rem 0 .6rem" }}>Sent {fmtDateTime(p.created_at)} via your share link</p>
-          <blockquote className="plan-text">{p.text}</blockquote>
+          <p className="small muted" style={{ margin: ".15rem 0 .6rem" }}>{p.consult_id ? `Reviewed and approved by ${p.author}` : "Sent"} {fmtDateTime(p.created_at)} via your share link</p>
+          {p.summary ? (
+            <>
+              <div className="plan-summary">
+                <h4>In plain words</h4>
+                <div className="plan-summary-text">{p.summary}</div>
+              </div>
+              {p.instructions && (
+                <details className="plan-exact">
+                  <summary>Exact wording approved by your clinician ({p.instructions.length})</summary>
+                  <ol>{p.instructions.map((i) => <li key={i.id}><span className="badge">{KIND_LABELS[i.kind]}</span> {i.text}</li>)}</ol>
+                </details>
+              )}
+            </>
+          ) : <blockquote className="plan-text">{p.text}</blockquote>}
           <div className="row">
             <button className="btn primary" onClick={() => onUse(p)} disabled={activeId === p.id}>{activeId === p.id ? "Added below: review and extract" : "Turn into checklist"}</button>
           </div>
