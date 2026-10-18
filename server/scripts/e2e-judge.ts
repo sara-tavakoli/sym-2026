@@ -146,7 +146,7 @@ await step("clinician (signed out) opens link, ticks a question, sends a plan", 
   await doc.getByText(/Sent to Alex/).waitFor();
 });
 
-await step("patient sees the plan and tick; Turn into checklist prefills; Extract shows clear AI message", async () => {
+await step("patient sees the plan and tick; Turn into checklist prefills; Extract → review → confirm", async () => {
   await alex.reload();
   await alex.getByText("New after-visit plan from Dr Lee, GP").waitFor();
   await alex.getByText("1 of 3 addressed").waitFor();
@@ -155,8 +155,12 @@ await step("patient sees the plan and tick; Turn into checklist prefills; Extrac
   await alex.waitForFunction(() => (document.querySelector(".instr textarea") as HTMLTextAreaElement | null)?.value.includes("vitamin D 1000 IU"), null, { timeout: 5000 })
     .catch(() => { throw new Error("instructions box should be prefilled with the plan"); });
   await alex.getByRole("button", { name: "Extract tasks" }).click();
-  await alex.locator(".followup .alert.error").getByText(/not configured|AI/).waitFor();
-  expect((await box.inputValue()).includes("vitamin D"), "text kept after AI failure");
+  // With or without an AI key (rules-based fallback), extraction produces a reviewable list; medication stays verbatim.
+  await alex.getByRole("heading", { name: "Review before saving" }).waitFor();
+  expect(await alex.locator(".review-list input").evaluateAll((els) => els.some((e) => (e as HTMLInputElement).value.includes("vitamin D 1000 IU"))), "medication kept verbatim in review");
+  await alex.getByRole("button", { name: /^Confirm \d+ tasks?$/ }).click();
+  await alex.getByText(/tasks? saved/).first().waitFor();
+  expect(!(await box.count()) || !(await box.inputValue()).includes("vitamin D"), "instructions box cleared after confirming");
 });
 
 await step("revoke link → clinician page shows unavailable", async () => {
@@ -341,15 +345,16 @@ await step("Fit Finder: Add to my appointments → prefilled form → saved", as
   await alex.getByRole("heading", { name: prac, level: 1 }).waitFor();
 });
 
-await step("AI Assistant page: send shows a graceful not-configured message", async () => {
+await step("AI Assistant page: replies with guidance and action buttons", async () => {
   await alex.goto(base + "/app/assistant");
   await alex.getByPlaceholder(/Write a message/).fill("I have a GP appointment next week about headaches");
   await alex.getByRole("button", { name: "Send message" }).click();
-  await alex.locator(".assistant").getByText(/not configured|AI service/).first().waitFor();
-  await alex.getByRole("button", { name: "Try again" }).waitFor();
+  // The assistant guides to the right feature (AI or rules-based guide), with an action button to the appointment.
+  await alex.locator(".msg-assistant .msg-bubble").last().waitFor();
+  await alex.locator(".msg-actions a").first().waitFor();
 });
 
-await step("AI Preparation: list loads; Generate brief shows graceful not-configured message", async () => {
+await step("AI Preparation: list loads; Generate brief produces a brief to confirm", async () => {
   await alex.goto(base + "/app/preparation");
   await alex.getByRole("heading", { level: 1 }).first().waitFor();
   await alex.goto(base + "/app/appointments");
@@ -357,8 +362,8 @@ await step("AI Preparation: list loads; Generate brief shows graceful not-config
   await alex.getByRole("link", { name: "Prepare for this appointment" }).click();
   await alex.getByLabel("What is your main concern?").fill("My gum bleeds when I brush my teeth");
   await alex.getByRole("button", { name: "Generate brief" }).click();
-  await alex.getByRole("alert").getByText(/not configured|AI service/).first().waitFor();
-  expect((await alex.getByLabel("What is your main concern?").inputValue()).includes("gum bleeds"), "notes kept after AI failure");
+  // A brief is produced (AI or rules-based fallback) and can be confirmed.
+  await alex.getByRole("button", { name: "Confirm brief" }).waitFor({ timeout: 30000 });
 });
 
 await step("refresh persistence: imported appointments, plan and circle activity survive reload", async () => {
@@ -367,7 +372,9 @@ await step("refresh persistence: imported appointments, plan and circle activity
   await alex.locator(".appt-row", { hasText: "Dr Priya Example" }).first().waitFor();
   await alex.locator(".appt-row", { hasText: "Mei Sample" }).first().waitFor();
   await alex.goto(gpUrl);
-  await alex.getByText("New after-visit plan from Dr Lee, GP").waitFor();
+  // The plan was turned into a checklist in an earlier step, so it now shows as imported and its tasks persist.
+  await alex.getByText(/earlier plans? already turned into a checklist/).first().waitFor();
+  await alex.getByText(/vitamin D 1000 IU/).first().waitFor();
   await alex.goto(base + "/app/circle");
   await alex.locator(".feed").getByText(/Stand up slowly/).first().waitFor();
 });
