@@ -7,7 +7,22 @@ import { Modal, PrepBadge, Skeletons, Spinner } from "../components/ui";
 import { FollowUpPanel } from "../components/FollowUpPanel";
 import { ShareCard } from "../components/ShareCard";
 import { ClinicianPlans } from "../components/ClinicianPlans";
-import { markPlanImported } from "../lib/shares";
+import { markPlanImported, type SharesData } from "../lib/shares";
+
+/** Prepare → Share → Follow through: where this appointment is in the loop. */
+function Journey({ steps }: { steps: { label: string; href: string; done: boolean }[] }) {
+  const now = steps.findIndex((s) => !s.done);
+  return (
+    <ol className="journey" aria-label="Appointment journey">
+      {steps.map((s, i) => (
+        <li key={s.label} className={s.done ? "done" : i === now ? "now" : ""} aria-current={i === now ? "step" : undefined}>
+          {s.href.startsWith("#") ? <a href={s.href}><span className="dot">{s.done ? "✓" : i + 1}</span>{s.label}<span className="sr-only">{s.done ? " (done)" : ""}</span></a>
+            : <Link to={s.href}><span className="dot">{s.done ? "✓" : i + 1}</span>{s.label}<span className="sr-only">{s.done ? " (done)" : ""}</span></Link>}
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 export default function AppointmentDetail() {
   const { id } = useParams();
@@ -21,10 +36,15 @@ export default function AppointmentDetail() {
   // A clinician plan being turned into a checklist; marked imported once its tasks are confirmed.
   const [planDraft, setPlanDraft] = useState<{ id: string; text: string; key: number } | null>(null);
   const [plansKey, setPlansKey] = useState(0);
+  const [shared, setShared] = useState(false);
 
   useEffect(() => {
     api.get<Appointment>(`/appointments/${id}`).then(setAppt).catch((e: ApiError) => setError(e.status === 404 ? "We couldn't find that appointment." : e.message));
   }, [id]);
+
+  useEffect(() => {
+    api.get<SharesData>(`/appointments/${id}/shares`).then((d) => setShared(d.shares.length > 0)).catch(() => {});
+  }, [id, appt?.prep_status]);
 
   const refresh = () => { api.get<Appointment>(`/appointments/${id}`).then(setAppt).catch(() => {}); };
 
@@ -56,6 +76,11 @@ export default function AppointmentDetail() {
           <button className="btn ghost danger" onClick={() => setConfirmDelete(true)}>Delete</button>
         </div>
       </header>
+      <Journey steps={[
+        { label: "Prepare", href: `/app/appointments/${appt.id}/prepare`, done: appt.prep_status === "confirmed" },
+        { label: "Share", href: "#share", done: shared },
+        { label: "Follow through", href: "#follow-up", done: appt.done_tasks > 0 && appt.open_tasks === 0 },
+      ]} />
       <dl className="facts">
         <div><dt>Service</dt><dd>{appt.service_type}</dd></div>
         <div><dt>Clinic</dt><dd>{appt.clinic_name}</dd></div>
@@ -76,7 +101,7 @@ export default function AppointmentDetail() {
           </div>
         </section>
 
-        <ShareCard appt={appt} />
+        <div id="share"><ShareCard appt={appt} /></div>
 
         <section className="panel section-pad" id="follow-up" aria-labelledby="fu-h">
           <div className="panel-head">

@@ -34,7 +34,7 @@ export default function Auth({ mode }: { mode: "login" | "register" }) {
   return (
     <div className="auth-wrap">
       <div className="auth-card stack fade-in">
-        <Link to="/" className="brand" style={{ justifyContent: "center", color: "var(--text)" }}><Logo /> CarePath AI</Link>
+        <Link to="/" className="brand" style={{ justifyContent: "center" }}><Logo size={34} /><span className="wordmark">CarePath</span><span className="wordmark-ai">AI</span></Link>
         <div className="card">
           <h1 style={{ fontSize: "1.5rem" }}>{isReg ? "Create your account" : "Welcome back"}</h1>
           <p className="muted small">{isReg ? "Demo use only — please use fictional information." : "Log in to see your appointments and tasks."}</p>

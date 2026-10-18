@@ -31,7 +31,7 @@ export default function Join() {
   return (
     <div className="auth-wrap">
       <div className="auth-card stack fade-in">
-        <Link to="/" className="brand" style={{ justifyContent: "center", color: "var(--text)" }}><Logo /> CarePath AI</Link>
+        <Link to="/" className="brand" style={{ justifyContent: "center" }}><Logo size={34} /><span className="wordmark">CarePath</span><span className="wordmark-ai">AI</span></Link>
         <div className="card">
           {!info && !error && <Skeletons rows={2} />}
           {!info && error && <><h1 style={{ fontSize: "1.4rem" }}>Invite not found</h1><div className="alert error" role="alert">{error}</div></>}
