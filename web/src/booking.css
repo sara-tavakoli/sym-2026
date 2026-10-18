@@ -77,3 +77,10 @@
 .share-choice button:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 .share-choice strong { font-size: .95rem; }
 .share-choice span { font-size: .84rem; color: var(--muted); }
+.ff-pathway { margin: 0 0 .6rem; padding: .6rem .8rem; border-radius: var(--radius-sm); background: var(--primary-soft); line-height: 1.5; }
+
+/* Prepare: after saving the brief */
+.send-brief { text-align: center; margin-top: 1rem; }
+.send-brief p.muted { max-width: 60ch; margin-left: auto; margin-right: auto; }
+.send-brief-actions { justify-content: center; }
+.send-brief-link { text-align: left; margin-top: 1rem; }

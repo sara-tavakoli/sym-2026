@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { generate } from "./client.js";
+import { generate, withRulesFallback } from "./client.js";
 import { injectionSentences, overlapsInjection } from "./safety.js";
 import { DAYS, type Day, type Prefs } from "../providers/matching.js";
 import { ACCESS_FEATURES, type AccessFeature } from "../providers/directory.js";
@@ -121,7 +121,40 @@ export function verifyPreferences(raw: { items: z.infer<typeof prefItem>[] }, te
   return { prefs, evidence, dropped };
 }
 
-export async function extractPreferences(text: string): Promise<ExtractedPrefs> {
-  const raw = await generate({ system: SYSTEM, user: `<request>\n${text.trim()}\n</request>`, schema: SCHEMA }, output);
-  return verifyPreferences(raw, text);
+const RULE_TIMES: Record<string, RegExp> = {
+  morning: /\b(mornings?|before (noon|lunch|work))\b/i,
+  afternoon: /\b(afternoons?|after lunch)\b/i,
+  evening: /\b(evenings?|after (work|hours|5|6))\b/i,
+};
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Deterministic fallback when the AI is unavailable (no key, busy, daily quota used up): the same keyword
+ * patterns the verifier uses, quoting the exact words matched, so the result passes the same verification.
+ * `places` are the covered suburbs and postcodes, matched as whole words.
+ */
+export function rulesPreferences(text: string, places: string[] = []): { items: z.infer<typeof prefItem>[] } {
+  const items: z.infer<typeof prefItem>[] = [];
+  const add = (field: PrefField, value: string, re: RegExp) => { const m = re.exec(text); if (m) items.push({ field, value, quote: m[0] }); };
+  for (const [v, re] of Object.entries(CATEGORY_WORDS)) add("category", v, re);
+  const place = [...places].filter(Boolean).sort((a, b) => b.length - a.length).map((p) => new RegExp(`\\b${escapeRe(p)}\\b`, "i").exec(text)).find(Boolean);
+  if (place) items.push({ field: "location", value: place[0], quote: place[0] });
+  for (const [v, re] of Object.entries(DAY_WORDS)) add("day", v, re);
+  // Stricter than TIME_WORDS: a bare "am" or "pm" ("I am looking…") is not a time preference without the AI to judge it.
+  for (const [v, re] of Object.entries(RULE_TIMES)) if (!items.some((i) => i.field === "time")) add("time", v, re);
+  for (const [v, re] of Object.entries(MODE_WORDS)) if (!items.some((i) => i.field === "mode")) add("mode", v, re);
+  for (const [v, re] of Object.entries(ACCESS_WORDS)) add("accessibility", v, re);
+  add("bulk_billing", "yes", /\bbulk[- ]?bill\w*/i);
+  const lang = LANGUAGES.find((l) => new RegExp(`\\b${l}\\b`, "i").test(text));
+  if (lang) add("language", lang.toLowerCase(), new RegExp(`\\b${lang}\\b`, "i"));
+  if (/\b(female|woman|women|lady)\b/i.test(text)) add("practitioner_gender", "female", /\b(female|woman|women|lady)\b/i);
+  else add("practitioner_gender", "male", /\b(male|man|men)\b/i);
+  return { items };
+}
+
+export async function extractPreferences(text: string, places: string[] = []): Promise<ExtractedPrefs & { source: "ai" | "rules" }> {
+  const { value: raw, source } = await withRulesFallback(
+    () => generate({ system: SYSTEM, user: `<request>\n${text.trim()}\n</request>`, schema: SCHEMA }, output),
+    () => rulesPreferences(text, places));
+  return { ...verifyPreferences(raw, text), source };
 }

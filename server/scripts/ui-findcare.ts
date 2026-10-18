@@ -29,7 +29,7 @@ for (const [label, viewport, scheme] of [["desktop", { width: 1280, height: 900 
   await page.getByRole("link", { name: "Call Lifeline 13 11 14" }).waitFor();
   ok(`${label}: Lifeline shown for self-harm`, (await page.getByRole("link", { name: "Call Lifeline 13 11 14" }).getAttribute("href")) === "tel:131114");
 
-  // 2. Questionnaire -> summary + suggestion -> public clinic search prefilled (no account needed to look).
+  // 2. Questionnaire -> clinic type stage -> Find a clinic lists suitable clinics on the same page (no account needed).
   await page.getByLabel(/In your own words/).fill("Sore ankle after a fall");
   await page.locator(".fc-chip", { hasText: "Physiotherapist" }).waitFor();
   ok(`${label}: Might suit chip appears while typing`, true);
@@ -44,18 +44,16 @@ for (const [label, viewport, scheme] of [["desktop", { width: 1280, height: 900 
   await page.getByLabel("In person").check();
   await overflow("step 4");
   await page.getByRole("button", { name: "Show me where to start" }).click();
-  await page.getByRole("heading", { name: /often start with a physiotherapist/ }).waitFor();
+  await page.locator(".fc-type-name", { hasText: /physiotherapist/i }).waitFor();
   ok(`${label}: reason quotes the person's words`, (await page.locator(".fc-reason").innerText()).includes("“ankle”"));
   await overflow("result");
   await page.screenshot({ path: `${shots}/findcare-result-${label}.png`, fullPage: true });
   ok(`${label}: summary repeats the person's words`, (await page.locator(".fc-summary").innerText()).includes("Sore ankle after a fall"));
-  await page.getByRole("button", { name: "Find a clinic and book" }).click();
-  await page.waitForURL(/\/search\?/);
-  const url = new URL(page.url());
-  ok(`${label}: Fit Finder prefilled`, url.searchParams.get("category") === "physiotherapist" && url.searchParams.get("location") === "Macquarie Park" && url.searchParams.get("mode") === "in_person", url.search);
-  await page.locator(".provider-card, article").first().waitFor();
-  ok(`${label}: Fit Finder shows results`, (await page.locator("article").count()) > 0);
-  await page.screenshot({ path: `${shots}/fitfinder-prefilled-${label}.png`, fullPage: false });
+  await page.getByRole("button", { name: "Find a clinic", exact: true }).click();
+  await page.locator(".fc-clinic").first().waitFor();
+  const listHead = await page.locator("#fc-clinics-h").innerText();
+  ok(`${label}: physiotherapy clinics near Macquarie Park listed`, /physiotherapist/i.test(listHead) && /Macquarie Park/.test(listHead), listHead);
+  await page.screenshot({ path: `${shots}/findcare-clinics-${label}.png`, fullPage: false });
 
   // 3. Demo guide (sign in to a /try sandbox, then open Book care).
   await page.goto(base + "/try");

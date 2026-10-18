@@ -28,7 +28,8 @@
 - **"Privacy?"** Fictional data only. Share and invite tokens are stored hashed; supporters never see private notes; account deletion removes everything. AI text goes to the provider only when the user asks.
 
 ## Extra segments if there's time or a question
-- **Book care** (public, /get-care): "No, I'm not sure" → *Help me find care*: "I have a headache and feel unsure what to do" → summary + GP pathway → Find a clinic and book → Book appointment → pick a time → Create an account → profile → Review → Confirm → dashboard → Prepare (the concern is pre-filled) → on the appointment, "No, keep it for myself".
+- **Book care** (public, /get-care): "No, I'm not sure" → *Help me find care*: "I have a headache and feel unsure what to do" → "The kind of clinic to start with: GP" → Find a clinic (GP clinics appear on the same page) → Book appointment → pick a time → Create an account → profile → Review → Confirm → dashboard → Prepare (the concern is pre-filled) → on the appointment, "No, keep it for myself".
+- **Demo defaults:** every form on that path starts filled with fictional details (concern, follow-up answers, suburb, earliest time, sign-up, patient profile, preparation notes), so a timed demo is mostly Continue. Log-in starts with the presenter account `branda@example.com` / `12345678`, which the server creates at start-up (`PRESENTER_ACCOUNT=off` to skip). Turn the defaults off with `DEMO_FILL` in `web/src/lib/demo-fill.ts`.
 - **Import a booking**: Appointments → Import booking confirmation → Sample email → Fill in the form.
 - **Assistant**: "Can you write me some Python code?" → politely declined; "I want to invite my mum to help" → Care circle button.
 

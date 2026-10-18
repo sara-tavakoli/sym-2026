@@ -35,6 +35,7 @@ export function ShareCard({ appt, onChoice }: { appt: Appointment; onChoice?: (a
     try {
       const r = await api.post<{ path: string }>(`/appointments/${appt.id}/shares`, { expires_in_days: days });
       setLink(`${window.location.origin}${r.path}`);
+      window.dispatchEvent(new Event("carepath:notifications"));
       load();
     } catch (e) { setError(e instanceof ApiError ? e.message : "Could not create the link"); } finally { setBusy(""); }
   }
@@ -51,7 +52,7 @@ export function ShareCard({ appt, onChoice }: { appt: Appointment; onChoice?: (a
 
   async function decide(choice: "share" | "private") {
     setBusy(choice); setError("");
-    try { onChoice?.(await api.put<Appointment>(`/appointments/${appt.id}/share-choice`, { choice })); }
+    try { onChoice?.(await api.put<Appointment>(`/appointments/${appt.id}/share-choice`, { choice })); window.dispatchEvent(new Event("carepath:notifications")); }
     catch (e) { setError(e instanceof ApiError ? e.message : "Couldn't save your choice"); } finally { setBusy(""); }
   }
 

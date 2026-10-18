@@ -42,7 +42,7 @@ await page.getByRole("button", { name: "Delete point" }).last().click();
 await page.getByRole("button", { name: "Save edits" }).click();
 await page.getByText("Edits saved").waitFor();
 step(`edited and saved brief (questions ${before} -> ${await textareas.count()}, one deleted somewhere)`);
-await page.getByRole("button", { name: "Confirm brief" }).click();
+await page.getByRole("button", { name: "Save brief" }).click();
 await page.getByText("This brief is confirmed").waitFor();
 step("confirmed brief");
 await page.reload();

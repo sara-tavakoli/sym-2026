@@ -5,7 +5,7 @@ import type { Server } from "node:http";
 
 process.env.DATABASE_PATH = ":memory:";
 delete process.env.GEMINI_API_KEY;
-const { setAiClient } = await import("../src/ai/client.js");
+const { setAiClient, AiError } = await import("../src/ai/client.js");
 const { verifyPreferences } = await import("../src/ai/preferences.js");
 const { evaluate, prefsSchema } = await import("../src/providers/matching.js");
 
@@ -163,6 +163,18 @@ test("extract endpoint returns verified preferences and location coverage", asyn
   assert.deepEqual(r.data.prefs, { category: "dentist", location: "Sydney", days: ["sat"] });
   assert.equal(r.data.location_known, true);
   assert.equal((await c.call("POST", "/api/fit-finder/extract", { text: "" })).status, 400);
+});
+
+test("extract falls back to rules when the AI's daily quota is used up", async () => {
+  setAiClient({ async json() { throw new AiError("The AI's daily usage limit has been reached.", 429); } });
+  const r = await c.call("POST", "/api/fit-finder/extract", { text: "I am looking for a bulk billing GP near Macquarie Park on weekends, telehealth is fine, who speaks Mandarin" });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.source, "rules");
+  assert.deepEqual(r.data.prefs, { category: "gp", location: "Macquarie Park", days: ["sat", "sun"], mode: "telehealth", bulk_billing: true, language: "Mandarin" });
+  assert.equal(r.data.location_known, true);
+  // Symptoms never become a service type, and "I am" is not a morning preference.
+  const s = await c.call("POST", "/api/fit-finder/extract", { text: "I am getting headaches and need someone near 2113" });
+  assert.deepEqual(s.data.prefs, { location: "2113" });
 });
 
 test("evaluate() unit: verified negative is not_met, missing is unverified", () => {

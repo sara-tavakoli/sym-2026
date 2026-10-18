@@ -22,7 +22,7 @@ import { fitFinderRouter } from "./routes/fit-finder.js";
 import { circleRouter, supportingRouter } from "./routes/circle.js";
 import { publicShareRouter, shareHeaders, sharesRouter } from "./routes/shares.js";
 import { ensureDemoDirectory } from "./providers/demo-data.js";
-import { demoRouter, purgeDemoAccounts } from "./demo.js";
+import { demoRouter, ensurePresenterAccount, purgeDemoAccounts } from "./demo.js";
 import { importRouter } from "./routes/import.js";
 import { attentionRouter } from "./routes/attention.js";
 import { findCareRouter } from "./routes/find-care.js";
@@ -31,6 +31,7 @@ import { bookingRouter, profileRouter } from "./routes/booking.js";
 
 export function createApp() {
   ensureDemoDirectory();
+  ensurePresenterAccount().catch((e) => console.error("presenter account", e));
   purgeDemoAccounts();
   setInterval(purgeDemoAccounts, 3600_000).unref();
   const app = express();

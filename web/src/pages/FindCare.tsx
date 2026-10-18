@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { api, ApiError, prefsToQuery } from "../lib/api";
+import { api, ApiError, prefsToQuery, type SearchResult } from "../lib/api";
 import { useApp } from "../lib/app-context";
 import { Spinner } from "../components/ui";
 import { EmergencyBanner } from "../components/EmergencyBanner";
 import { PublicShell, carePath, rememberConcern } from "../components/PublicShell";
+import { DEMO, fill } from "../lib/demo-fill";
 import "../findcare.css";
 
 // "Help me find care": the person describes the concern in their own words, answers a few follow-up questions,
@@ -49,10 +50,10 @@ export default function FindCare({ publicPage = false }: { publicPage?: boolean 
   const nav = useNavigate();
   const [params] = useSearchParams();
   const [step, setStep] = useState(0);
-  const [concern, setConcern] = useState(() => (params.get("concern") ?? "").slice(0, 1000));
-  const [duration, setDuration] = useState<Duration | "">("");
-  const [seen, setSeen] = useState<Seen | "">("");
-  const [location, setLocation] = useState("");
+  const [concern, setConcern] = useState(() => (params.get("concern") ?? fill(DEMO.concern) ?? "").slice(0, 1000));
+  const [duration, setDuration] = useState<Duration | "">(fill(DEMO.duration) ?? "");
+  const [seen, setSeen] = useState<Seen | "">(fill(DEMO.seen) ?? "");
+  const [location, setLocation] = useState(fill(DEMO.location) ?? "");
   const [mode, setMode] = useState<Mode>("either");
   const [preview, setPreview] = useState<{ chips: Chip[]; emergency: Emergency | null }>({ chips: [], emergency: null });
   const [ack, setAck] = useState(false);
@@ -223,65 +224,114 @@ export default function FindCare({ publicPage = false }: { publicPage?: boolean 
 
 interface Answers { concern: string; duration: Duration | ""; seen: Seen | ""; mode: Mode }
 
+interface Target { category: string; label: string; mode: "in_person" | "telehealth" | null }
+
 function Result({ r, acknowledged, busy, signedIn, error, answers, headRef, onOpen, onEdit, onRestart }: {
   r: SuggestResponse; acknowledged: boolean; busy: boolean; signedIn: boolean; error: string; answers: Answers;
   headRef: React.RefObject<HTMLHeadingElement | null>; onOpen: (url: string) => void; onEdit: () => void; onRestart: () => void;
 }) {
   const s = r.suggestion!;
   const loc = r.location?.known ? r.location.suburb : null;
-  const mainUrl = s.category ? searchUrl(signedIn, s.category, loc, s.mode) : null;
+  const [target, setTarget] = useState<Target | null>(null);
+  const [clinics, setClinics] = useState<SearchResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [listError, setListError] = useState("");
+  const listRef = useRef<HTMLHeadingElement>(null);
+
+  // "Find a clinic": suitable clinics of the suggested type straight away, nearest first when a suburb is known.
+  async function findClinics(t: Target) {
+    setTarget(t); setLoading(true); setListError(""); setClinics(null);
+    const q = (radius: number) => `/fit-finder/search?${prefsToQuery({ category: t.category, location: loc ?? undefined, mode: t.mode ?? undefined, radius_km: radius })}&pageSize=6`;
+    try {
+      let res = await api.get<SearchResult>(q(20));
+      if (loc && t.mode !== "telehealth" && res.total === 0) res = await api.get<SearchResult>(q(50));
+      setClinics(res);
+      setTimeout(() => listRef.current?.focus(), 0);
+    } catch (e) { setListError(e instanceof ApiError ? e.message : "Couldn't load clinics. Please try again."); }
+    finally { setLoading(false); }
+  }
+  const book = (id: string, mode: Target["mode"]) => onOpen(`${carePath(signedIn, "book", encodeURIComponent(id))}${mode === "telehealth" ? "?mode=telehealth" : ""}`);
+  const shown = target ?? (s.category ? { category: s.category, label: s.label, mode: s.mode } : null);
+  const where = r.location?.known ? r.location.resolved : r.location ? `${r.location.query} (outside the demo area)` : null;
+
   return (
     <section className="fc-result" aria-labelledby="fc-result-h">
       {r.emergency && <EmergencyBanner selfHarm={r.emergency.selfHarm} acknowledged={acknowledged} />}
-      <div className="card fc-summary" aria-labelledby="fc-summary-h">
-        <div className="fc-summary-head"><h2 id="fc-summary-h">Your concern, summarised</h2><button type="button" className="btn ghost sm" onClick={onEdit}>Edit</button></div>
-        <dl>
-          <div><dt>In your words</dt><dd>“{answers.concern}”</dd></div>
-          {answers.duration && <div><dt>How long</dt><dd>{DURATIONS.find((d) => d.id === answers.duration)?.label}</dd></div>}
-          {answers.seen && <div><dt>Seen anyone?</dt><dd>{SEEN.find((d) => d.id === answers.seen)?.label}</dd></div>}
-          <div><dt>Where and how</dt><dd>{r.location?.known ? r.location.resolved : r.location ? `${r.location.query} (not in the demo area)` : "Anywhere"} · {MODES.find((m) => m.id === answers.mode)?.label}</dd></div>
-        </dl>
-        <p className="small muted" style={{ margin: 0 }}>Only you see this. It's kept in this browser tab so it can go with your booking as the reason for visit.</p>
-      </div>
-      <div className="card fc-suggest">
-        <p className="eyebrow">Suggested pathway</p>
-        <h2 id="fc-result-h" ref={headRef} tabIndex={-1}>{s.headline}</h2>
+
+      <div className="card fc-suggest fc-type">
+        <p className="eyebrow">Where to go</p>
+        <h2 id="fc-result-h" ref={headRef} tabIndex={-1}>The kind of clinic to start with</h2>
+        <p className="fc-type-name"><span className="fc-type-icon" aria-hidden="true">+</span>{shown?.label ?? s.label}</p>
         <p className="fc-reason">{s.reason}</p>
-        {s.notes.length > 0 && <ul className="fc-notes">{s.notes.map((n) => <li key={n}>{n}</li>)}</ul>}
-        {r.location && !r.location.known && (
-          <p className="alert warn">“{r.location.query}” isn't in the demo directory's coverage yet, so we'll show services without a location filter. You can choose a suburb in Fit Finder.</p>
-        )}
-        {mainUrl && (
+
+        <div className="fc-summary" aria-label="Your concern, summarised">
+          <span className="fc-summary-label">Your concern:</span> “{answers.concern}”
+          {answers.duration && <> · {DURATIONS.find((d) => d.id === answers.duration)?.label}</>}
+          {answers.seen && <> · {SEEN.find((d) => d.id === answers.seen)?.label}</>}
+          {where && <> · {where}</>} · {MODES.find((m) => m.id === answers.mode)?.label}
+          {" "}<button type="button" className="chip-link fc-edit" onClick={onEdit}>Edit</button>
+        </div>
+
+        {r.location && !r.location.known && <p className="alert warn small">“{r.location.query}” isn't in the demo directory's area yet, so clinics are shown without a location filter.</p>}
+
+        {shown && (
           <div className="fc-cta">
-            <button type="button" className="btn primary fc-big" onClick={() => onOpen(mainUrl)} disabled={busy}>
-              {busy ? <Spinner /> : null}Find a clinic and book
+            <button type="button" className="btn primary fc-big" onClick={() => findClinics(shown)} disabled={busy || loading}>
+              {loading ? <Spinner /> : null}Find a clinic
             </button>
-            <p className="fc-hint">
-              Shows <strong>{s.label}</strong> clinics{loc ? <> near <strong>{r.location!.resolved}</strong></> : null}
-              {s.mode === "telehealth" ? <> offering <strong>telehealth</strong></> : s.mode === "in_person" ? <>, <strong>in person</strong></> : null}. Choose one and pick a time.
-              {!signedIn && " No sign-up needed to look; you'll sign in when you confirm."}
-            </p>
+            {!clinics && <p className="fc-hint">Shows {shown.label} clinics{loc ? <> near <strong>{r.location!.resolved}</strong></> : null}{shown.mode === "telehealth" ? " offering telehealth" : ""}. {!signedIn && "No sign-up needed to look."}</p>}
           </div>
         )}
         {error && <p className="alert error" role="alert">{error}</p>}
-        {s.alternatives.length > 0 && (
-          <div className="fc-alts">
-            <h3>Other options</h3>
-            <ul>
-              {s.alternatives.map((a) => (
-                <li key={a.id}>
-                  <div><strong>{a.label}</strong> <span className="muted">{a.reason}</span></div>
-                  {a.category && <button type="button" className="btn sm" onClick={() => onOpen(searchUrl(signedIn, a.category!, loc, a.id === "telehealth_gp" ? "telehealth" : s.mode))} disabled={busy}>Search {a.label}</button>}
+
+        {s.alternatives.some((a) => a.category) && (
+          <p className="fc-alt-line small">
+            <span className="muted">Not quite right? Try </span>
+            {s.alternatives.filter((a) => a.category).map((a) => (
+              <button key={a.id} type="button" className="pref-chip chip-link" title={a.reason} disabled={loading}
+                onClick={() => findClinics({ category: a.category!, label: a.label, mode: a.id === "telehealth_gp" ? "telehealth" : s.mode })}>{a.label}</button>
+            ))}
+          </p>
+        )}
+      </div>
+
+      {(clinics || listError) && target && (
+        <section className="card fc-clinics" aria-labelledby="fc-clinics-h" aria-busy={loading}>
+          <h2 id="fc-clinics-h" ref={listRef} tabIndex={-1}>
+            {clinics ? `${clinics.total} ${target.label} ${clinics.total === 1 ? "clinic" : "clinics"}${clinics.origin && target.mode !== "telehealth" ? ` near ${clinics.origin.suburb}` : ""}` : "Clinics"}
+          </h2>
+          {listError && <p className="alert error" role="alert">{listError}</p>}
+          {clinics && clinics.total === 0 && <p className="muted">No {target.label} clinics in the demo directory match yet. Try another option above, or open the full search.</p>}
+          {clinics && clinics.items.length > 0 && (
+            <ul className="fc-clinic-list">
+              {clinics.items.map((it) => (
+                <li key={it.provider.id} className="fc-clinic">
+                  <div className="fc-clinic-body">
+                    <h3>{it.provider.name}</h3>
+                    <p className="fc-clinic-sub">{it.provider.clinic.name} · {it.provider.clinic.suburb}{it.distance_km !== null ? ` · ${it.distance_km} km` : ""}</p>
+                    <p className="fc-clinic-tags">
+                      {it.provider.telehealth?.value && <span className="pref-chip static">Telehealth</span>}
+                      {it.provider.billing?.bulk_billing === "all" && <span className="pref-chip static">Bulk billing</span>}
+                      {it.provider.hours.some((h) => h.day >= 5) && <span className="pref-chip static">Open weekends</span>}
+                      {it.provider.is_fictional && <span className="badge warn">Fictional demo</span>}
+                    </p>
+                  </div>
+                  <button type="button" className="btn primary sm" onClick={() => book(it.provider.id, target.mode)}>Book appointment<span className="sr-only"> with {it.provider.name}</span></button>
                 </li>
               ))}
             </ul>
-          </div>
-        )}
-        <p className="fc-fine">This is general guidance based on the words you used, not a diagnosis or a judgement about urgency. If you're unsure, a GP or Healthdirect (<a href="tel:1800022222">1800 022 222</a>) can help you decide.</p>
-        <div className="row">
-          <button type="button" className="btn ghost sm" onClick={onEdit}>Change my answers</button>
-          <button type="button" className="btn ghost sm" onClick={onRestart}>Start over</button>
-        </div>
+          )}
+          <p className="small muted" style={{ margin: ".8rem 0 0" }}>
+            Nearest first. Want to filter by hours, language or accessibility?{" "}
+            <button type="button" className="chip-link" onClick={() => onOpen(searchUrl(signedIn, target.category, loc, target.mode))}>Open the full search</button>
+          </p>
+        </section>
+      )}
+
+      <p className="fc-fine">This is general guidance based on the words you used, not a diagnosis or a judgement about urgency. If you're unsure, a GP or Healthdirect (<a href="tel:1800022222">1800 022 222</a>) can help you decide.</p>
+      <div className="row">
+        <button type="button" className="btn ghost sm" onClick={onEdit}>Change my answers</button>
+        <button type="button" className="btn ghost sm" onClick={onRestart}>Start over</button>
       </div>
     </section>
   );

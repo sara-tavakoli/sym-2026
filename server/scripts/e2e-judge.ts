@@ -364,7 +364,7 @@ await step("AI Preparation: list loads; Generate brief produces a brief to confi
   await alex.getByLabel("What is your main concern?").fill("My gum bleeds when I brush my teeth");
   await alex.getByRole("button", { name: "Generate brief" }).click();
   // A brief is produced (AI or rules-based fallback) and can be confirmed.
-  await alex.getByRole("button", { name: "Confirm brief" }).waitFor({ timeout: 30000 });
+  await alex.getByRole("button", { name: "Save brief" }).waitFor({ timeout: 30000 });
 });
 
 await step("refresh persistence: imported appointments, plan and circle activity survive reload", async () => {

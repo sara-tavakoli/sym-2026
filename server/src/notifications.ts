@@ -4,7 +4,7 @@ import { db } from "./db.js";
 import { newId } from "./auth.js";
 import { sydneyToday } from "./schema-followthrough.js";
 
-export type NotificationKind = "brief_viewed" | "plan_sent" | "task_taken" | "task_completed" | "task_overdue";
+export type NotificationKind = "brief_viewed" | "brief_shared" | "plan_sent" | "task_taken" | "task_completed" | "task_overdue";
 
 const short = (s: string, n = 80) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
 
@@ -26,6 +26,15 @@ const practitioner = (s: ShareRef) =>
 export function notifyBriefViewed(share: ShareRef) {
   const who = practitioner(share);
   notify(share.user_id, "brief_viewed", `${who ?? "Your clinician"} viewed your brief`, `/app/appointments/${share.appointment_id}`, `viewed:${share.id}:${sydneyToday()}`);
+}
+
+/** The patient chose to share their brief, or created a share link: confirmed in the bell straight away. */
+export function notifyBriefShared(userId: string, appointmentId: string, step: "chosen" | "link", expiresAt?: string) {
+  const who = (db.prepare("SELECT practitioner_name FROM appointments WHERE id = ? AND user_id = ?").get(appointmentId, userId) as { practitioner_name: string } | undefined)?.practitioner_name ?? "your clinician";
+  const until = expiresAt ? new Date(expiresAt).toLocaleDateString("en-AU", { day: "numeric", month: "short", timeZone: "Australia/Sydney" }) : null;
+  notify(userId, "brief_shared", step === "chosen"
+    ? `You chose to share your brief with ${who}. Create the link to send it.`
+    : `Your brief is shared with ${who}${until ? ` until ${until}` : ""}. Send them the link.`, `/app/appointments/${appointmentId}#share`);
 }
 
 /** Clinician sent an after-visit plan through a share link. */

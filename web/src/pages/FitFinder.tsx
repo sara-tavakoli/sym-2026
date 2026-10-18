@@ -9,6 +9,9 @@ import { Skeletons, Spinner } from "../components/ui";
 import { AppointmentForm } from "../components/AppointmentForm";
 import { CATEGORY_TO_SERVICE, ProviderCard, prefChips, useFitMeta } from "../components/fit";
 import { PublicShell, carePath } from "../components/PublicShell";
+import { DEMO, fill } from "../lib/demo-fill";
+import { EmergencyBanner } from "../components/EmergencyBanner";
+import "../booking.css";
 
 const EMPTY: Partial<Prefs> = { radius_km: 10 };
 const PAGE_SIZE = 6;
@@ -33,9 +36,11 @@ function Finder({ signedIn }: { signedIn: boolean }) {
   const [result, setResult] = useState<SearchResult | null>(null);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<{ message: string; suggestions?: string[] } | null>(null);
-  const [nl, setNl] = useState("");
+  const [nl, setNl] = useState(fill(DEMO.fitFinderRequest) ?? "");
   const [reading, setReading] = useState(false);
   const [understood, setUnderstood] = useState<ExtractedPrefs | null>(null);
+  const [pathway, setPathway] = useState<{ label: string; reason: string } | null>(null);
+  const [emergency, setEmergency] = useState<{ selfHarm: boolean } | null>(null);
   const [compare, setCompare] = useState<string[]>([]);
   const [saved, setSaved] = useState<SavedSearch[]>([]);
   const [addFor, setAddFor] = useState<SearchResult["items"][number] | null>(null);
@@ -78,12 +83,23 @@ function Finder({ signedIn }: { signedIn: boolean }) {
   const toggleDay = (d: Day) => set("days", (form.days ?? []).includes(d) ? form.days!.filter((x) => x !== d) : [...(form.days ?? []), d]);
   const toggleAccess = (a: AccessFeature) => set("accessibility", (form.accessibility ?? []).includes(a) ? form.accessibility!.filter((x) => x !== a) : [...(form.accessibility ?? []), a]);
 
-  async function readRequest() {
-    setReading(true); setError(null); setUnderstood(null);
+  // Reads the request, then searches straight away. If no service type was named (e.g. "I have a headache"),
+  // the same non-diagnostic rules as Help me find care suggest where people often start, shown with the reason.
+  async function readRequest(acknowledged = false) {
+    setReading(true); setError(null); setUnderstood(null); setPathway(null); setEmergency(null);
     try {
       const r = await api.post<ExtractedPrefs>("/fit-finder/extract", { text: nl });
+      const prefs: Partial<Prefs> = { ...EMPTY, ...r.prefs };
+      if (!prefs.category) {
+        const s = await api.post<{ emergency: { selfHarm: boolean } | null; suggestion: { label: string; category: string | null; reason: string } | null }>(
+          "/find-care/suggest", { concern: nl.trim(), acknowledged_emergency: acknowledged || undefined });
+        if (s.emergency && !s.suggestion) { setEmergency(s.emergency); setUnderstood(r); setForm(prefs); return; }
+        if (s.emergency) setEmergency(s.emergency);
+        if (s.suggestion?.category) { prefs.category = s.suggestion.category; setPathway({ label: s.suggestion.label, reason: s.suggestion.reason }); }
+      }
       setUnderstood(r);
-      setForm({ ...EMPTY, ...r.prefs }); // review in the form before searching
+      setForm(prefs);
+      if (prefs.category) { setCompare([]); run(prefs); } // filters stay editable below; results show now
     } catch (e) { setError({ message: e instanceof ApiError ? e.message : "Couldn't read that request." }); }
     finally { setReading(false); }
   }
@@ -126,18 +142,25 @@ function Finder({ signedIn }: { signedIn: boolean }) {
             <textarea id="nl-input" rows={2} maxLength={1000} value={nl} onChange={(e) => setNl(e.target.value)}
               placeholder="e.g. A GP around Macquarie Park on weekends, bulk billing if available, who speaks Mandarin" />
           </div>
-          <button className="btn" onClick={readRequest} disabled={nl.trim().length < 3 || reading}>{reading && <Spinner />} Read my request</button>
+          <button className="btn" onClick={() => readRequest()} disabled={nl.trim().length < 3 || reading}>{reading && <Spinner />} Read my request</button>
         </div>
+        {emergency && <EmergencyBanner selfHarm={emergency.selfHarm} acknowledged={!!pathway || !!understood?.prefs.category} onAcknowledge={() => readRequest(true)} />}
         {understood && (
           <div className="understood" role="status">
+            {pathway && (
+              <p className="ff-pathway">
+                <strong>You didn't name a service, so we're showing {pathway.label} clinics.</strong> {pathway.reason}{" "}
+                <span className="muted">This is a common first stop, not a diagnosis. You can change the service type below.</span>
+              </p>
+            )}
             {understood.evidence.length ? (
               <>
                 <strong>We picked out:</strong>
                 <ul>{understood.evidence.map((e, i) => <li key={i}><span className="pref-chip static">{e.field.replace("_", " ")}: {e.value}</span> from “{e.quote}”</li>)}</ul>
-                <p className="small muted">Review the filters below, adjust anything, then search.{understood.dropped ? " Some details couldn't be matched to your exact words and were left out." : ""}</p>
+                <p className="small muted">Results are below. Adjust the filters to refine them.{understood.dropped ? " Some details couldn't be matched to your exact words and were left out." : ""}</p>
                 {understood.location_known === false && <p className="small warn-text">“{understood.prefs.location}” isn't covered by the demo directory — choose a listed suburb below.</p>}
               </>
-            ) : <p className="small">We couldn't find specific preferences in that request. Use the filters below instead.</p>}
+            ) : !pathway && <p className="small">We couldn't find specific preferences in that request. Use the filters below instead.</p>}
           </div>
         )}
       </section>}

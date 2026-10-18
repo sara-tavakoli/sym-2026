@@ -1114,3 +1114,12 @@ span.task-check { width: 0; }
   /* Long button labels wrap instead of pushing the page wider than the screen. */
   .btn { white-space: normal; max-width: 100%; text-align: center; height: auto; min-height: 40px; }
 }
+
+/* Sign-in / sign-up type-ahead: grey completion drawn behind the input text. */
+.suggest { position: relative; display: block; margin-top: .35rem; }
+.suggest input { position: relative; background: transparent; z-index: 1; }
+.suggest::before { content: ""; position: absolute; inset: 0; border-radius: 12px; background: var(--surface); }
+.suggest-ghost { position: absolute; inset: 0; z-index: 0; display: flex; align-items: center; padding: 0 calc(.85rem + 1px); font: inherit; font-size: .95rem; color: var(--faint); white-space: pre; overflow: hidden; pointer-events: none; }
+.suggest-typed { color: transparent; }
+.suggest-hint kbd, .auth-card kbd { font: inherit; font-size: .78rem; font-weight: 600; padding: .05rem .4rem; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 6px; background: var(--surface-2); }
+.suggest-hint code { font-size: .85rem; }

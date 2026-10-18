@@ -212,5 +212,6 @@ test("clinician viewing a brief and sending a plan notifies the patient", async 
   await clinician.call("GET", `/api/share/${token}`); // a second view the same day is not a second notification
   assert.equal((await clinician.call("POST", `/api/share/${token}/plan`, { author: "Dr Example, GP", text: "Book a review in 2 weeks." })).status, 201);
   const n = (await c.call("GET", "/api/notifications")).data;
-  assert.deepEqual(n.items.map((x: any) => x.message).sort(), ["Dr Example viewed your brief", "Dr Example, GP sent your after-visit plan"]);
+  assert.deepEqual(n.items.filter((x: any) => x.kind !== "brief_shared").map((x: any) => x.message).sort(), ["Dr Example viewed your brief", "Dr Example, GP sent your after-visit plan"]);
+  assert.equal(n.items.filter((x: any) => x.kind === "brief_shared").length, 1, "creating the link notified the patient too");
 });

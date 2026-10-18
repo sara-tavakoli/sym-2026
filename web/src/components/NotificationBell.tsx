@@ -36,7 +36,8 @@ export function NotificationBell() {
     const t = setInterval(() => { if (document.visibilityState === "visible") load(); }, POLL_MS);
     const onVis = () => { if (document.visibilityState === "visible") load(); };
     document.addEventListener("visibilitychange", onVis);
-    return () => { clearInterval(t); document.removeEventListener("visibilitychange", onVis); };
+    window.addEventListener("carepath:notifications", load); // an action that creates a notification asks for a refresh
+    return () => { clearInterval(t); document.removeEventListener("visibilitychange", onVis); window.removeEventListener("carepath:notifications", load); };
   }, [load]);
 
   // Float when the slot we were mounted in is not displayed.

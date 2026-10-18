@@ -100,7 +100,7 @@
 .notif-dot { width: .55rem; height: .55rem; border-radius: 50%; margin-top: .4rem; flex: none; background: var(--muted); }
 .notif-dot.k-task_overdue { background: var(--cat-urgent); }
 .notif-dot.k-task_taken, .notif-dot.k-task_completed { background: var(--cat-daily); }
-.notif-dot.k-brief_viewed, .notif-dot.k-plan_sent { background: var(--cat-follow_up); }
+.notif-dot.k-brief_viewed, .notif-dot.k-brief_shared, .notif-dot.k-plan_sent { background: var(--cat-follow_up); }
 .notif-text { display: grid; gap: .1rem; min-width: 0; }
 .notif-msg { font-size: .9rem; overflow-wrap: anywhere; }
 .notif-time { font-size: .78rem; color: var(--muted); }

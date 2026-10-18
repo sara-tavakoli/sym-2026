@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { db } from "../db.js";
 import { newId, requireAuth } from "../auth.js";
+import { notifyBriefShared } from "../notifications.js";
 
 export const appointmentsRouter = Router();
 appointmentsRouter.use(requireAuth);
@@ -83,6 +84,7 @@ appointmentsRouter.put("/:id/share-choice", (req, res) => {
   db.prepare(`INSERT INTO brief_share_choices (appointment_id, user_id, choice) VALUES (?,?,?)
               ON CONFLICT(appointment_id) DO UPDATE SET choice=excluded.choice, decided_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')`)
     .run(req.params.id, req.user!.id, choice);
+  if (choice === "share") notifyBriefShared(req.user!.id, req.params.id, "chosen");
   res.json(db.prepare(`${SELECT} WHERE a.id = ? AND a.user_id = ?`).get(req.params.id, req.user!.id));
 });
 

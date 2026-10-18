@@ -41,26 +41,26 @@ for (const [label, viewport, scheme] of [["desktop", { width: 1280, height: 900 
   await summary.waitFor();
   ok(`${label}: summary quotes Brenda's words`, (await summary.innerText()).includes(CONCERN));
   ok(`${label}: summary lists the follow-up answers`, /1 to 4 weeks/.test(await summary.innerText()) && /No, not yet/.test(await summary.innerText()));
-  ok(`${label}: suggested pathway is a GP`, /GP/i.test(await page.locator("#fc-result-h").innerText()), await page.locator("#fc-result-h").innerText());
-  await overflow("summary + pathway");
+  ok(`${label}: the clinic type to start with is a GP`, /GP/.test(await page.locator(".fc-type-name").innerText()), await page.locator(".fc-type-name").innerText());
+  ok(`${label}: no clinics until Find a clinic is pressed`, (await page.locator(".fc-clinic").count()) === 0);
+  await overflow("clinic type stage");
   await page.screenshot({ path: `${shots}/book-pathway-${label}.png`, fullPage: true });
 
-  // 3. Search clinics (signed out) and choose one.
-  await page.getByRole("button", { name: "Find a clinic and book" }).click();
-  await page.waitForURL(/\/search\?/);
-  ok(`${label}: clinic search is public and prefilled`, new URL(page.url()).searchParams.get("category") === "gp", page.url());
-  await page.getByRole("heading", { name: "Find a clinic" }).waitFor();
-  await page.locator("article.provider-card").first().waitFor();
-  ok(`${label}: no saved searches or compare when signed out`, (await page.getByRole("button", { name: "Save search" }).count()) === 0 && (await page.locator(".compare-toggle").count()) === 0);
-  await overflow("/search");
-  await page.locator("article.provider-card").first().getByRole("button", { name: /Book appointment/ }).click();
+  // 3. Find a clinic: suitable GP clinics appear straight away on the same page (signed out).
+  await page.getByRole("button", { name: "Find a clinic", exact: true }).click();
+  await page.locator(".fc-clinic").first().waitFor();
+  ok(`${label}: GP clinics listed on the same page`, /\/find-care/.test(page.url()) && /GP/.test(await page.locator("#fc-clinics-h").innerText()), page.url());
+  await overflow("clinic list");
+  await page.screenshot({ path: `${shots}/book-clinics-${label}.png`, fullPage: true });
+  await page.locator(".fc-clinic").first().getByRole("button", { name: /Book appointment/ }).click();
   await page.waitForURL(/\/book\//);
 
   // 4. Choose a time.
   await page.getByRole("heading", { name: "Choose a day and time" }).waitFor();
   ok(`${label}: reason for visit carried from Help me find care`, (await page.getByLabel(/Reason for visit/).inputValue()) === CONCERN);
-  ok(`${label}: Continue disabled until a time is chosen`, await page.getByRole("button", { name: "Continue" }).isDisabled());
-  await page.locator(".bk-slot").first().click();
+  await page.locator(".bk-slot.is-on").waitFor();
+  ok(`${label}: earliest time pre-selected (demo default)`, (await page.locator(".bk-slot").first().getAttribute("aria-pressed")) === "true");
+  ok(`${label}: Continue ready straight away`, await page.getByRole("button", { name: "Continue" }).isEnabled());
   await overflow("choose a time");
   await page.screenshot({ path: `${shots}/book-time-${label}.png`, fullPage: true });
   await page.getByRole("button", { name: "Continue" }).click();
@@ -71,17 +71,19 @@ for (const [label, viewport, scheme] of [["desktop", { width: 1280, height: 900 
   await page.waitForURL(/\/register\?next=/);
   ok(`${label}: sign-up explains the booking is kept`, await page.getByRole("note").filter({ hasText: "finish your booking" }).waitFor().then(() => true, () => false));
   await page.getByLabel("Name").fill("Brenda Example");
-  await page.getByLabel("Email").fill(`brenda-${label}-${Date.now()}@example.com`);
+  const email = `brenda-${label}-${Date.now()}@example.com`;
+  await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill("password123");
   await page.getByRole("button", { name: "Create account" }).click();
   await page.waitForURL(/\/app\/book\/.+slot=/);
 
   // 6. Complete the patient profile (new account), then review.
   await page.getByRole("heading", { name: "Complete your patient profile" }).waitFor();
+  ok(`${label}: profile pre-filled (demo default)`, (await page.getByLabel("Mobile phone").inputValue()) === "0400 123 456");
+  await page.getByLabel("Mobile phone").fill("call me");
   await page.getByRole("button", { name: "Save and continue" }).click();
   await page.locator(".err").first().waitFor();
   ok(`${label}: profile validates`, (await page.locator(".err").count()) >= 1);
-  await page.getByLabel("Date of birth").fill("1958-04-12");
   await page.getByLabel("Mobile phone").fill("0400 000 000");
   await page.getByRole("button", { name: "Save and continue" }).click();
   await page.getByRole("heading", { name: "Review your booking" }).waitFor();
@@ -108,8 +110,8 @@ for (const [label, viewport, scheme] of [["desktop", { width: 1280, height: 900 
   ok(`${label}: main concern prefilled from the booking`, (await page.getByLabel("What is your main concern?").inputValue()) === CONCERN);
   await page.getByLabel("Questions you want to ask").fill("Should I keep a headache diary?");
   await page.getByRole("button", { name: "Generate brief" }).click();
-  await page.getByRole("button", { name: "Confirm brief" }).waitFor({ timeout: 90_000 });
-  await page.getByRole("button", { name: "Confirm brief" }).click();
+  await page.getByRole("button", { name: "Save brief" }).waitFor({ timeout: 90_000 });
+  await page.getByRole("button", { name: "Save brief" }).click();
   await page.getByRole("button", { name: "Open printable brief" }).waitFor();
 
   // 9. Share brief with clinician? No → keep it for herself; My journey reflects it.
@@ -126,7 +128,23 @@ for (const [label, viewport, scheme] of [["desktop", { width: 1280, height: 900 
   await overflow("appointment detail");
   await page.screenshot({ path: `${shots}/book-journey-${label}.png`, fullPage: true });
 
-  // 10. The other branch: Brenda knows what she needs → search clinics directly (signed in → inside the app).
+  // 10. The other branch: Brenda knows what she needs → search clinics directly (public search, then inside the app).
+  await page.context().clearCookies();
+  await page.goto(base + "/get-care");
+  await page.getByRole("link", { name: /Search clinics directly/ }).click();
+  await page.waitForURL(/\/search$/);
+  await page.getByRole("heading", { name: "Find a clinic" }).waitFor();
+  ok(`${label}: no saved searches or compare when signed out`, (await page.getByRole("button", { name: "Save search" }).count()) === 0 && (await page.locator(".compare-toggle").count()) === 0);
+  await page.getByLabel(/Service type/).selectOption("gp");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await page.locator("article.provider-card").first().waitFor();
+  ok(`${label}: public search lists clinics with Book buttons`, (await page.locator("article.provider-card").first().getByRole("button", { name: /Book appointment/ }).count()) === 1);
+  await overflow("/search");
+  await page.goto(base + "/login");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill("password123");
+  await page.getByRole("button", { name: "Log in" }).click();
+  await page.waitForURL(/\/app$/);
   await page.goto(base + "/app/get-care");
   await page.getByRole("link", { name: /Search clinics directly/ }).click();
   await page.waitForURL(/\/app\/fit-finder$/);

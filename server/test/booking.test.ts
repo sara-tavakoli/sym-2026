@@ -116,6 +116,40 @@ test("times outside published hours, in the past or with unsupported telehealth 
   }
 });
 
+test("presenter account: seeded headache tasks, reset on demand (presenter only)", async () => {
+  const { ensurePresenterAccount } = await import("../src/demo.js");
+  await ensurePresenterAccount();
+  const p = new Client();
+  assert.equal((await p.call("POST", "/api/auth/login", { email: "branda@example.com", password: "12345678" })).status, 200);
+  const tasks = async () => (await p.call("GET", "/api/tasks?pageSize=50&status=all")).data.items as any[];
+  const seeded = await tasks();
+  assert.ok(seeded.some((t) => t.title === "Keep a headache diary"));
+  const blood = seeded.find((t) => /blood test/i.test(t.title));
+  assert.equal((await p.call("PATCH", `/api/tasks/${blood.id}`, { status: "completed" })).status, 200);
+  assert.equal((await p.call("POST", "/api/demo/presenter-reset")).status, 200);
+  const after = await tasks();
+  assert.equal(after.filter((t) => /blood test/i.test(t.title)).length, 1, "reset replaces, never duplicates");
+  assert.equal(after.find((t) => /blood test/i.test(t.title)).status, "todo");
+  assert.equal(after.length, seeded.length);
+  const other = await signup("not-presenter@example.com");
+  assert.equal((await other.call("POST", "/api/demo/presenter-reset")).status, 403);
+});
+
+test("sharing a brief adds a notification", async () => {
+  const c = await signup("notify@example.com");
+  const a = (await c.call("POST", "/api/appointments", { starts_at: new Date(Date.now() + 3 * 864e5).toISOString(), practitioner_name: "Dr Bell", service_type: "GP", clinic_name: "Demo" })).data;
+  await c.call("PUT", `/api/appointments/${a.id}/share-choice`, { choice: "share" });
+  await c.call("PUT", `/api/appointments/${a.id}/prep-notes`, { main_concern: "Headaches most mornings", onset: "", background: "", experiences: "", questions: "Should I keep a diary?", additional: "" });
+  await c.call("POST", `/api/appointments/${a.id}/brief/generate`);
+  await c.call("POST", `/api/appointments/${a.id}/shares`, { expires_in_days: 7 });
+  const n = (await c.call("GET", "/api/notifications")).data;
+  const shared = n.items.filter((x: any) => x.kind === "brief_shared");
+  assert.equal(shared.length, 2);
+  assert.ok(shared.some((x: any) => /chose to share your brief with Dr Bell/.test(x.message)));
+  assert.ok(shared.some((x: any) => /shared with Dr Bell until/.test(x.message)));
+  assert.ok(n.unread >= 2);
+});
+
 test("share choice: keep private or share, owner only; creating a link records 'share'", async () => {
   const c = await signup("share@example.com");
   const a = (await c.call("POST", "/api/appointments", { starts_at: new Date(Date.now() + 3 * 864e5).toISOString(), practitioner_name: "Dr X", service_type: "GP", clinic_name: "Demo" })).data;

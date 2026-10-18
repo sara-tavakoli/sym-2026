@@ -2,7 +2,7 @@ import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { randomBytes } from "node:crypto";
 import { db } from "./db.js";
-import { SESSION_COOKIE, createSession, hashPassword, newId } from "./auth.js";
+import { SESSION_COOKIE, createSession, hashPassword, newId, requireAuth } from "./auth.js";
 import { saveBrief } from "./routes/prep.js";
 import type { ViewSections } from "./briefs.js";
 import { addDays, zonedParts, zonedToUtc } from "./import/tz.js";
@@ -139,10 +139,79 @@ function seedCircle(uid: string, tasks: { blood: string; review: string }, locke
 }
 
 /** Removes expired demo accounts (cascades to everything they own). */
+// Presenter account for timed demos: the log-in form starts filled with it (web/src/lib/demo-fill.ts).
+// Fictional and data-free; set PRESENTER_ACCOUNT=off to skip it.
+export const PRESENTER = { email: "branda@example.com", password: "12345678", name: "Brenda Example" };
+export async function ensurePresenterAccount() {
+  if (process.env.PRESENTER_ACCOUNT === "off") return;
+  if (!db.prepare("SELECT 1 FROM users WHERE email = ?").get(PRESENTER.email)) {
+    db.prepare("INSERT OR IGNORE INTO users (id, email, name, password_hash) VALUES (?,?,?,?)").run(newId(), PRESENTER.email, PRESENTER.name, await hashPassword(PRESENTER.password));
+  }
+  const { id } = db.prepare("SELECT id FROM users WHERE email = ?").get(PRESENTER.email) as { id: string };
+  if (!db.prepare("SELECT 1 FROM follow_up_tasks WHERE user_id = ? LIMIT 1").get(id)) seedPresenterTasks(id);
+}
+
+/**
+ * The presenter's follow-up tracker: a GP visit about headaches ten days ago, the instructions from it, and tasks
+ * in every state (daily with ticks, overdue, due soon, done, a flagged medicine and an urgent warning sign).
+ */
+const PRESENTER_VISIT = { practitioner: "Dr Ava Example", purpose: "I have a headache and feel unsure what to do" };
+
+/** Puts the presenter's headache visit back as seeded (ticks, completions and edits undone). Bookings are kept. */
+export function resetPresenterTasks(uid: string) {
+  db.exec("BEGIN");
+  try {
+    db.prepare(`DELETE FROM appointments WHERE user_id = ? AND practitioner_name = ? AND purpose = ? AND starts_at < ?
+                AND EXISTS (SELECT 1 FROM visit_instructions vi WHERE vi.appointment_id = appointments.id)`)
+      .run(uid, PRESENTER_VISIT.practitioner, PRESENTER_VISIT.purpose, new Date().toISOString());
+    db.prepare("DELETE FROM notifications WHERE user_id = ? AND kind = 'task_overdue'").run(uid);
+    seedPresenterTasks(uid);
+    db.exec("COMMIT");
+  } catch (e) { db.exec("ROLLBACK"); throw e; }
+}
+
+export function seedPresenterTasks(uid: string) {
+  const visit = newId(), instr = newId(), today = sydneyToday();
+  db.prepare(`INSERT INTO appointments (id, user_id, starts_at, practitioner_name, service_type, clinic_name, location, purpose) VALUES (?,?,?,?,?,?,?,?)`)
+    .run(visit, uid, at(-10, 10, 0), PRESENTER_VISIT.practitioner, "General practitioner (GP)", "Riverbend Family Practice (Demo)", "12 Example Rd, Macquarie Park NSW", PRESENTER_VISIT.purpose);
+  const lines = {
+    diary: "Keep a headache diary every day for 2 weeks: when each headache starts, how long it lasts, screen time, sleep, and what you ate or drank.",
+    water: "Drink about 2 litres of water a day and take a 5-minute screen break every hour.",
+    meds: "Paracetamol 500 mg, 2 tablets up to 4 times a day if needed for headache. No more than 8 tablets in 24 hours.",
+    blood: "Blood test (full blood count) within 1 week at any pathology collection centre.",
+    eyes: "Get your eyes tested at an optometrist within 2 weeks.",
+    review: "Book a review appointment with me in 3 weeks to go through the diary and results.",
+    warning: "Call 000 or go to the emergency department straight away if you get a sudden severe headache, weakness, confusion or loss of vision.",
+  };
+  db.prepare("INSERT INTO visit_instructions (id, user_id, appointment_id, raw_text) VALUES (?,?,?,?)").run(instr, uid, visit, Object.values(lines).join("\n"));
+  const task = db.prepare(`INSERT INTO follow_up_tasks (id, user_id, appointment_id, instruction_id, title, source_text, deadline, status, needs_clarification, clarification_reason,
+                             category, duration_days, start_date, notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+  const med = "Medication wording is shown exactly as entered. Confirm any details with your healthcare professional or pharmacist.";
+  const diary = newId(), water = newId();
+  task.run(diary, uid, visit, instr, "Keep a headache diary", lines.diary, null, "in_progress", 0, null, "daily", 14, addDays(today, -9), null);
+  task.run(water, uid, visit, instr, "Drink 2 litres of water and take hourly screen breaks", lines.water, null, "in_progress", 0, null, "daily", 14, addDays(today, -9), null);
+  task.run(newId(), uid, visit, instr, lines.meds, lines.meds, null, "todo", 1, med, "one_time", null, null, null);
+  task.run(newId(), uid, visit, instr, "Get a blood test (full blood count)", lines.blood, "within 1 week", "todo", 0, null, "follow_up", null, null, null);
+  task.run(newId(), uid, visit, instr, "Get your eyes tested at an optometrist", lines.eyes, "within 2 weeks", "completed", 0, null, "follow_up", null, null, "Booked and done at Northgate Optometry (Demo). New reading glasses ordered.");
+  task.run(newId(), uid, visit, instr, "Book a review appointment in 3 weeks", lines.review, "in 3 weeks", "todo", 0, null, "follow_up", null, null, null);
+  task.run(newId(), uid, visit, instr, "Know the warning signs: call 000 for a sudden severe headache", lines.warning, null, "todo", 0, null, "urgent", null, null, null);
+  // Most past days ticked (one missed diary day); today is left for the presenter to tick live.
+  const tick = db.prepare("INSERT INTO task_day_ticks (task_id, user_id, day) VALUES (?,?,?)");
+  for (const d of [-9, -8, -7, -6, -4, -3, -2, -1]) tick.run(diary, uid, addDays(today, d));
+  for (const d of [-9, -8, -7, -6, -5, -4, -3, -2, -1]) tick.run(water, uid, addDays(today, d));
+}
+
 export function purgeDemoAccounts() {
   const cutoff = new Date(Date.now() - DEMO_TTL_HOURS * 3600_000).toISOString();
   return db.prepare("DELETE FROM users WHERE email LIKE ? AND created_at < ?").run(`%@${DEMO_DOMAIN}`, cutoff).changes;
 }
+
+// Each page load as the presenter starts the demo fresh: the app calls this once when it boots (web/src/lib/app-context.tsx).
+demoRouter.post("/presenter-reset", requireAuth, (req, res) => {
+  if (req.user!.email !== PRESENTER.email) return res.status(403).json({ error: "Only the presenter account can be reset" });
+  resetPresenterTasks(req.user!.id);
+  res.json({ ok: true });
+});
 
 demoRouter.post("/", limiter, async (_req, res) => {
   const id = newId();

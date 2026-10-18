@@ -4,6 +4,7 @@ import { api, ApiError, type PatientProfile, type ProviderRecord, type User } fr
 import { useApp } from "../lib/app-context";
 import { Field, Skeletons, Spinner } from "../components/ui";
 import { PublicShell, carePath, recallConcern, rememberConcern } from "../components/PublicShell";
+import { DEMO, fill } from "../lib/demo-fill";
 import "../booking.css";
 
 // Choose clinic and time → signed in already? (sign in / sign up) → complete profile if needed → review → confirm.
@@ -50,7 +51,7 @@ function Booking({ providerId, user }: { providerId: string; user: User | null }
   const [loadError, setLoadError] = useState("");
   const [profile, setProfile] = useState<PatientProfile | null | undefined>(undefined);
   const [step, setStep] = useState<Step>("time");
-  const [reason, setReason] = useState(recallConcern);
+  const [reason, setReason] = useState(() => recallConcern() || (fill(DEMO.concern) ?? ""));
   const [day, setDay] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -78,6 +79,8 @@ function Booking({ providerId, user }: { providerId: string; user: User | null }
   useEffect(() => { if (step === "account" && user && profile !== undefined) setStep(profile ? "review" : "profile"); }, [step, user, profile]);
 
   useEffect(() => { if (firstRender.current) { firstRender.current = false; return; } headRef.current?.focus(); }, [step]);
+  // Demo default: the earliest open time is pre-selected, so "Continue" works straight away.
+  useEffect(() => { if (fill(true) && data && !slot && step === "time" && data.days[0]?.slots[0]) choose(data.days[0].slots[0]); }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (data && !day) setDay((slot && data.days.find((d) => d.slots.includes(slot))?.date) || data.days[0]?.date || null); }, [data, day, slot]);
 
   const choose = (iso: string) => { setError(""); setParams((p) => { p.set("slot", iso); return p; }, { replace: true }); };
@@ -306,10 +309,10 @@ function ProfileStep({ initial, headRef, onSaved, onBack }: {
       <p className="small muted">{initial ? "Update anything that's changed." : "Clinics need a few details to book you in. You only do this once."} Demo only: please use fictional details.</p>
       {error && <div className="alert error" role="alert">{error}</div>}
       <div className="bk-form">
-        <Field label="Date of birth" error={fields.date_of_birth}><input name="date_of_birth" type="date" required max={todayYmd()} min="1900-01-01" defaultValue={initial?.date_of_birth} autoComplete="bday" /></Field>
-        <Field label="Mobile phone" error={fields.phone}><input name="phone" type="tel" required maxLength={20} defaultValue={initial?.phone} autoComplete="tel" placeholder="0400 000 000" /></Field>
-        <Field label="Emergency contact (optional)" error={fields.emergency_name}><input name="emergency_name" maxLength={100} defaultValue={initial?.emergency_name ?? ""} placeholder="Name" /></Field>
-        <Field label="Emergency contact phone (optional)" error={fields.emergency_phone}><input name="emergency_phone" type="tel" maxLength={20} defaultValue={initial?.emergency_phone ?? ""} /></Field>
+        <Field label="Date of birth" error={fields.date_of_birth}><input name="date_of_birth" type="date" required max={todayYmd()} min="1900-01-01" defaultValue={initial?.date_of_birth ?? fill(DEMO.profile.date_of_birth)} autoComplete="bday" /></Field>
+        <Field label="Mobile phone" error={fields.phone}><input name="phone" type="tel" required maxLength={20} defaultValue={initial?.phone ?? fill(DEMO.profile.phone)} autoComplete="tel" placeholder="0400 000 000" /></Field>
+        <Field label="Emergency contact (optional)" error={fields.emergency_name}><input name="emergency_name" maxLength={100} defaultValue={initial ? initial.emergency_name ?? "" : fill(DEMO.profile.emergency_name) ?? ""} placeholder="Name" /></Field>
+        <Field label="Emergency contact phone (optional)" error={fields.emergency_phone}><input name="emergency_phone" type="tel" maxLength={20} defaultValue={initial ? initial.emergency_phone ?? "" : fill(DEMO.profile.emergency_phone) ?? ""} /></Field>
       </div>
       <div className="fc-nav">
         <button type="button" className="btn ghost" onClick={onBack}>Back</button>

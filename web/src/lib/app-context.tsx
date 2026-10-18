@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { api, ApiError, type ChatMessage, type User } from "./api";
+import { DEMO, DEMO_FILL } from "./demo-fill";
 
 type Theme = "light" | "dark" | "system";
 interface Toast { id: number; text: string; kind: "ok" | "error" }
@@ -32,7 +33,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [chat, setChat] = useState<ChatMessage[]>([]);
 
   useEffect(() => {
-    api.get<{ user: User | null }>("/auth/session").then((r) => setUser(r.user)).catch((e) => console.error(e)).finally(() => setLoading(false));
+    // A refresh as the presenter puts the demo tasks back first, so every page shows the fresh state.
+    api.get<{ user: User | null }>("/auth/session")
+      .then(async (r) => { if (DEMO_FILL && r.user?.email === DEMO.login.email) await api.post("/demo/presenter-reset").catch(() => {}); setUser(r.user); })
+      .catch((e) => console.error(e)).finally(() => setLoading(false));
   }, []);
 
   const setTheme = useCallback((t: Theme) => {

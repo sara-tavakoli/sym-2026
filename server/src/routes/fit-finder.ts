@@ -66,7 +66,7 @@ fitFinderRouter.get("/compare", (req, res) => {
 fitFinderRouter.post("/extract", chatLimiter, async (req, res) => {
   const { text } = z.object({ text: z.string().trim().min(3, "Describe what you're looking for").max(1000) }).parse(req.body);
   try {
-    const r = await extractPreferences(text);
+    const r = await extractPreferences(text, directory.locations().flatMap((l) => [l.suburb, l.postcode]));
     const loc = r.prefs.location ? directory.resolveLocation(r.prefs.location) : null;
     res.json({ ...r, location_known: r.prefs.location ? !!loc : null, location_resolved: loc ? `${loc.suburb} ${loc.state} ${loc.postcode}` : null });
   } catch (e) {

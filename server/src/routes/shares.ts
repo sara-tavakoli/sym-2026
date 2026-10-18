@@ -6,7 +6,7 @@ import { db } from "../db.js";
 import { newId, requireAuth } from "../auth.js";
 import { SECTIONS } from "../ai/brief.js";
 import { loadBrief } from "./prep.js";
-import { notifyBriefViewed, notifyPlanSent } from "../notifications.js";
+import { notifyBriefShared, notifyBriefViewed, notifyPlanSent } from "../notifications.js";
 import { aiInfo, AiError } from "../ai/client.js";
 import { aiDraftConsult, aiSummary } from "../ai/consult.js";
 import { draftNotes, extractInstructions, classify, rulesSummary, LIMITS, NOTE_KEYS, type Instruction, type Notes } from "../consult/rules.js";
@@ -80,6 +80,7 @@ sharesRouter.post("/shares", (req, res) => {
   db.prepare(`INSERT INTO brief_share_choices (appointment_id, user_id, choice) VALUES (?,?,'share')
               ON CONFLICT(appointment_id) DO UPDATE SET choice='share', decided_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')`).run(apptId, uid);
   const share = db.prepare(`SELECT ${SHARE_COLS} FROM appointment_shares WHERE id = ? AND user_id = ?`).get(id, uid) as unknown as ShareRow;
+  notifyBriefShared(uid, apptId, "link", share.expires_at);
   logEvent({ user_id: uid, appointment_id: apptId, share_id: id }, "patient", "link_created", `Patient created a share link (expires in ${b.expires_in_days} day${b.expires_in_days === 1 ? "" : "s"})`);
   res.status(201).json({ share: withStatus(share), token, path: `/c/${token}` });
 });

@@ -66,7 +66,7 @@ await page.getByRole("button", { name: "Create appointment" }).click();
 await page.waitForURL(/\/prepare$/);
 await page.getByRole("heading", { name: "Main reason for the appointment" }).waitFor();
 ok("draft attached: brief appears on the new appointment", (await page.locator(".source q").count()) >= 3);
-await page.getByRole("button", { name: "Confirm brief" }).click();
+await page.getByRole("button", { name: "Save brief" }).click();
 await page.getByText("This brief is confirmed").waitFor();
 ok("attached brief confirmed", true);
 
