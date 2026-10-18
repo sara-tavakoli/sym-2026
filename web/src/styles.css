@@ -1027,7 +1027,7 @@ span.task-check { width: 0; }
 .journey .done .dot { background: var(--primary); color: var(--on-primary); }
 .journey .now a { border-color: var(--primary); background: var(--surface); color: var(--primary-ink); font-weight: 650; box-shadow: var(--shadow-sm); }
 .journey .now .dot { background: var(--warm); color: #fff; }
-@media (max-width: 480px) { .journey li + li::before { width: .75rem; } .journey a { padding-right: .6rem; font-size: .84rem; } }
+@media (max-width: 480px) { .journey { gap: .15rem; } .journey li + li::before { display: none; } .journey a { padding-right: .6rem; font-size: .84rem; } }
 
 /* Fit Finder & compare */
 .provider-card { border-radius: var(--radius); background: var(--frost); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); box-shadow: var(--shadow); padding: 1.25rem 1.4rem; transition: transform .3s, box-shadow .3s; }
